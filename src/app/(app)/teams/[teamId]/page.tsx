@@ -419,14 +419,11 @@ export default function TeamDetailPage() {
                     })),
                   ]}
                 />
-                {selectedTemplateId && (() => {
-                  const t = templates.find((t) => t.id === selectedTemplateId);
-                  return t ? (
-                    <p className="text-xs text-violet-600 mt-1">
-                      ✓ {t.stories.length} stories will be pre-loaded · deck: <span className="capitalize">{t.card_deck}</span>
-                    </p>
-                  ) : null;
-                })()}
+                {selectedTemplateId && templates.find((t) => t.id === selectedTemplateId) && (
+                  <p className="text-xs text-violet-600 mt-1">
+                    ✓ {templates.find((t) => t.id === selectedTemplateId)!.stories.length} stories will be pre-loaded · deck: <span className="capitalize">{templates.find((t) => t.id === selectedTemplateId)!.card_deck}</span>
+                  </p>
+                )}
               </div>
             )}
 

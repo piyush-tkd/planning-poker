@@ -46,6 +46,10 @@ function TeamDetailContent() {
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState<SessionTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [settingName, setSettingName] = useState("");
+  const [settingDeck, setSettingDeck] = useState("fibonacci");
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [deletingTeam, setDeletingTeam] = useState(false);
   const supabase = createClient();
   const role = membership?.role ?? "member";
 
@@ -68,7 +72,11 @@ function TeamDetailContent() {
 
   const loadTeam = async () => {
     const { data } = await supabase.from("teams").select("*").eq("id", teamId).single();
-    if (data) setTeam(data);
+    if (data) {
+      setTeam(data);
+      setSettingName(data.name);
+      setSettingDeck(data.card_deck ?? "fibonacci");
+    }
   };
 
   const loadMembers = async () => {
@@ -88,6 +96,21 @@ function TeamDetailContent() {
       .eq("team_id", teamId)
       .order("created_at", { ascending: false });
     if (data) setSessions(data);
+  };
+
+  const handleSaveSettings = async () => {
+    if (!settingName.trim()) return;
+    setSavingSettings(true);
+    await supabase.from("teams").update({ name: settingName.trim(), card_deck: settingDeck }).eq("id", teamId);
+    setTeam((prev) => prev ? { ...prev, name: settingName.trim(), card_deck: settingDeck } : prev);
+    setSavingSettings(false);
+  };
+
+  const handleDeleteTeam = async () => {
+    if (!confirm(`Delete "${team?.name}"? This will remove all sessions and data. This cannot be undone.`)) return;
+    setDeletingTeam(true);
+    await supabase.from("teams").delete().eq("id", teamId);
+    router.push("/teams");
   };
 
   const handleStartSession = async () => {
@@ -328,12 +351,13 @@ function TeamDetailContent() {
               <CardContent className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Team Name</label>
-                  <Input defaultValue={team.name} />
+                  <Input value={settingName} onChange={(e) => setSettingName(e.target.value)} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Card Deck</label>
                   <Select
-                    value={team.card_deck}
+                    value={settingDeck}
+                    onChange={(e) => setSettingDeck(e.target.value)}
                     options={[
                       { value: "fibonacci", label: "Fibonacci (0, 1, 2, 3, 5, 8, 13, 21...)" },
                       { value: "tshirt", label: "T-Shirt (XS, S, M, L, XL, XXL)" },
@@ -342,10 +366,12 @@ function TeamDetailContent() {
                   />
                 </div>
                 <div className="pt-4 flex items-center justify-between">
-                  <Button variant="destructive" size="sm">
-                    <Trash2 className="h-4 w-4 mr-1" /> Delete Team
+                  <Button variant="destructive" size="sm" onClick={handleDeleteTeam} disabled={deletingTeam}>
+                    <Trash2 className="h-4 w-4 mr-1" /> {deletingTeam ? "Deleting..." : "Delete Team"}
                   </Button>
-                  <Button>Save Changes</Button>
+                  <Button onClick={handleSaveSettings} disabled={savingSettings || !settingName.trim()}>
+                    {savingSettings ? "Saving..." : "Save Changes"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

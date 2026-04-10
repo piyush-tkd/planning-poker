@@ -199,7 +199,7 @@ export default function DashboardPage() {
   };
 
   const handleJoinSession = async () => {
-    const code = joinCode.trim().toUpperCase();
+    const code = joinCode.trim();
     if (!code) return;
     setJoinLoading(true);
     setJoinError(null);
@@ -207,7 +207,7 @@ export default function DashboardPage() {
     const { data, error: dbError } = await supabase
       .from("sessions")
       .select("id, name, status")
-      .eq("join_code", code)
+      .ilike("join_code", code)
       .single();
 
     if (dbError || !data) {

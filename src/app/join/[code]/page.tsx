@@ -9,7 +9,7 @@ import { Spade } from "lucide-react";
 
 export default function JoinSessionPage() {
   const params = useParams();
-  const code = (params.code as string).toUpperCase();
+  const code = (params.code as string);
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,7 @@ export default function JoinSessionPage() {
     const { data } = await supabase
       .from("sessions")
       .select("id, name, status, teams(name)")
-      .eq("join_code", code)
+      .ilike("join_code", code)
       .eq("status", "active")
       .single();
 

@@ -263,7 +263,7 @@ function TeamDetailContent() {
             <TabsTrigger value="sessions">
               <Clock className="h-4 w-4 mr-1.5" /> Sessions ({sessions.length})
             </TabsTrigger>
-            {role === "admin" && (
+            {(role === "admin" || role === "scrum_master") && (
               <TabsTrigger value="settings">
                 <Settings className="h-4 w-4 mr-1.5" /> Settings
               </TabsTrigger>
@@ -366,9 +366,13 @@ function TeamDetailContent() {
                   />
                 </div>
                 <div className="pt-4 flex items-center justify-between">
-                  <Button variant="destructive" size="sm" onClick={handleDeleteTeam} disabled={deletingTeam}>
-                    <Trash2 className="h-4 w-4 mr-1" /> {deletingTeam ? "Deleting..." : "Delete Team"}
-                  </Button>
+                  {role === "admin" ? (
+                    <Button variant="destructive" size="sm" onClick={handleDeleteTeam} disabled={deletingTeam}>
+                      <Trash2 className="h-4 w-4 mr-1" /> {deletingTeam ? "Deleting..." : "Delete Team"}
+                    </Button>
+                  ) : (
+                    <span />
+                  )}
                   <Button onClick={handleSaveSettings} disabled={savingSettings || !settingName.trim()}>
                     {savingSettings ? "Saving..." : "Save Changes"}
                   </Button>

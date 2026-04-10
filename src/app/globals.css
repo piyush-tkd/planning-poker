@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+}
+
+@layer components {
+  /* ── Poker cards ───────────────────────────────────────────── */
+  .poker-card {
+    @apply relative w-12 h-[72px] sm:w-14 sm:h-[84px] md:w-16 md:h-24
+      rounded-xl border-2 border-slate-200 bg-white
+      flex items-center justify-center text-base sm:text-lg font-bold cursor-pointer
+      transition-all duration-150 select-none
+      hover:border-indigo-400 hover:-translate-y-2 hover:shadow-xl hover:scale-105;
+  }
+
+  /* Corner suit pips */
+  .poker-card::before,
+  .poker-card::after {
+    @apply absolute text-[10px] font-semibold text-slate-300 leading-none pointer-events-none;
+  }
+  .poker-card::before {
+    content: "♠";
+    @apply top-1.5 left-2;
+  }
+  .poker-card::after {
+    content: "♠";
+    @apply bottom-1.5 right-2 rotate-180;
+  }
+
+  .poker-card.selected {
+    @apply border-indigo-600 bg-indigo-600 text-white shadow-2xl shadow-indigo-300/50
+      ring-4 ring-indigo-300/60;
+    transform: translateY(-14px) scale(1.08);
+    animation: cardSelect 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .poker-card.selected::before,
+  .poker-card.selected::after {
+    @apply text-indigo-300;
+  }
+
+  /* Face-down card (waiting for reveal) */
+  .poker-card.face-down {
+    @apply bg-gradient-to-br from-indigo-600 to-violet-600 border-indigo-700
+      cursor-default overflow-hidden;
+    color: transparent;
+  }
+  .poker-card.face-down::before,
+  .poker-card.face-down::after {
+    content: none;
+  }
+  /* Diamond pattern overlay */
+  .poker-card.face-down .card-pattern {
+    @apply absolute inset-0 flex items-center justify-center;
+  }
+
+  /* Revealed card (post-reveal flip in) */
+  .poker-card.revealed {
+    @apply border-slate-300 bg-white text-slate-900 cursor-default shadow-md;
+    animation: flipIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .poker-card.revealed::before,
+  .poker-card.revealed::after {
+    @apply text-indigo-200;
+  }
+
+  /* ── Gradient text ─────────────────────────────────────────── */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600;
+  }
+}
+
+/* ── Keyframes ────────────────────────────────────────────────── */
+@keyframes cardSelect {
+  0%   { transform: translateY(0px)   scale(1);    }
+  40%  { transform: translateY(-20px) scale(1.12); }
+  70%  { transform: translateY(-12px) scale(1.06); }
+  100% { transform: translateY(-14px) scale(1.08); }
+}
+
+@keyframes flipIn {
+  0%   { transform: rotateY(90deg) scale(0.85); opacity: 0; }
+  60%  { transform: rotateY(-8deg) scale(1.04); opacity: 1; }
+  100% { transform: rotateY(0deg)  scale(1);    opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
+
+@keyframes timerPulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.06); }
+}
+.animate-timer-pulse { animation: timerPulse 0.6s ease-in-out infinite; }
+
+@keyframes barGrow {
+  from { width: 0%; }
+  to   { width: var(--bar-width); }
+}
+
+.animate-delay-100 { animation-delay: 100ms; }
+.animate-delay-200 { animation-delay: 200ms; }
+.animate-delay-300 { animation-delay: 300ms; }

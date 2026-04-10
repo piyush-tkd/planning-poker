@@ -1,0 +1,2054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PointIt Planning Poker - Testing Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --accent: #a855f7;
+            --accent-light: #d8b4fe;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --neutral-50: #f9fafb;
+            --neutral-100: #f3f4f6;
+            --neutral-200: #e5e7eb;
+            --neutral-700: #374151;
+            --neutral-900: #111827;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            color: var(--neutral-900);
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 3rem 2rem;
+            border-radius: 8px;
+            margin-bottom: 3rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            margin-bottom: 1rem;
+        }
+
+        .quick-start {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .quick-start h3 {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .quick-start-item {
+            margin: 0.75rem 0;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .quick-start-item strong {
+            min-width: 150px;
+        }
+
+        .quick-start-item code {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        .toc {
+            background: white;
+            border-left: 4px solid var(--primary);
+            border-radius: 4px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .toc h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+        }
+
+        .toc ol {
+            columns: 2;
+            column-gap: 2rem;
+        }
+
+        .toc li {
+            margin-bottom: 0.75rem;
+            color: var(--neutral-700);
+        }
+
+        .toc a {
+            color: var(--primary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .toc a:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--accent-light);
+        }
+
+        .page-card {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-top: 4px solid var(--primary);
+            transition: box-shadow 0.2s;
+        }
+
+        .page-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--neutral-900);
+        }
+
+        .page-route {
+            font-family: 'Monaco', 'Courier New', monospace;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.4rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-admin {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-super-admin {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-member {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .badge-observer {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .badge-public {
+            background: #f3e8ff;
+            color: #5b21b6;
+        }
+
+        .test-section {
+            margin-top: 1.5rem;
+        }
+
+        .test-section h4 {
+            font-size: 1.1rem;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .test-section h4::before {
+            content: "▸";
+            font-weight: bold;
+        }
+
+        .checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .checklist li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding-left: 1.5rem;
+        }
+
+        .checklist input {
+            margin-top: 0.2rem;
+            cursor: pointer;
+            accent-color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .checklist label {
+            cursor: pointer;
+            flex: 1;
+            color: var(--neutral-700);
+        }
+
+        .expected {
+            background: var(--neutral-50);
+            border-left: 3px solid var(--success);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .expected strong {
+            color: var(--success);
+        }
+
+        .issues {
+            background: #fef3c7;
+            border-left: 3px solid var(--warning);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .issues strong {
+            color: #b45309;
+        }
+
+        .issues ul {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .issues li {
+            margin: 0.3rem 0;
+            color: #78350f;
+        }
+
+        .data-section {
+            background: white;
+            border-left: 4px solid var(--accent);
+            border-radius: 4px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .data-section h2 {
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .data-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--neutral-200);
+        }
+
+        .data-table tr:hover {
+            background: var(--neutral-50);
+        }
+
+        .data-category {
+            margin-bottom: 2rem;
+        }
+
+        .data-category h3 {
+            color: var(--primary);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .data-category p {
+            color: var(--neutral-700);
+            line-height: 1.7;
+        }
+
+        .flow-diagram {
+            background: var(--neutral-50);
+            border: 1px solid var(--neutral-200);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: var(--neutral-700);
+            overflow-x: auto;
+        }
+
+        .flow-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 1rem;
+            margin-right: 1rem;
+            white-space: nowrap;
+        }
+
+        .flow-arrow {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--neutral-700);
+            padding: 2rem;
+            border-top: 1px solid var(--neutral-200);
+            margin-top: 3rem;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .toc ol {
+                columns: 1;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .badge {
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        .print-hidden {
+            display: none;
+        }
+
+        @media print {
+            .page-card {
+                page-break-inside: avoid;
+            }
+
+            header {
+                background: var(--primary);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PointIt Planning Poker</h1>
+            <p>Comprehensive Testing Guide</p>
+            <div class="quick-start">
+                <h3>Quick Start</h3>
+                <div class="quick-start-item">
+                    <strong>App URL:</strong>
+                    <code>http://localhost:3000</code>
+                </div>
+                <div class="quick-start-item">
+                    <strong>Super Admin Login:</strong>
+                    <code>bahetipiyush@gmail.com</code> (Google OAuth)
+                </div>
+                <div class="quick-start-item">
+                    <strong>Test Data:</strong>
+                    Seeded with teams, members, and sample sessions
+                </div>
+            </div>
+        </header>
+
+        <div class="toc">
+            <h2>Table of Contents</h2>
+            <ol>
+                <li><a href="#public-pages">Public Pages (Landing, Login, Signup, Join)</a></li>
+                <li><a href="#auth-flow">Authentication Flow (Plan Selection)</a></li>
+                <li><a href="#super-admin">Super Admin Flow</a></li>
+                <li><a href="#admin-flow">Admin / Scrum Master Flow</a></li>
+                <li><a href="#member-flow">Team Member / Observer Flow</a></li>
+                <li><a href="#test-data">Test Data Overview</a></li>
+            </ol>
+        </div>
+
+        <!-- PUBLIC PAGES SECTION -->
+        <div class="section" id="public-pages">
+            <h2 class="section-title">Public Pages</h2>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Landing Page</div>
+                        <div class="page-route">GET /</div>
+                    </div>
+                    <span class="badge badge-public">Public</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Access & Visibility</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="p1_1"><label for="p1_1">Page loads without authentication required</label></li>
+                        <li><input type="checkbox" id="p1_2"><label for="p1_2">Hero section with headline, subheading, and CTA visible</label></li>
+                        <li><input type="checkbox" id="p1_3"><label for="p1_3">Features section displays 3-4 feature cards</label></li>
+                        <li><input type="checkbox" id="p1_4"><label for="p1_4">Pricing cards show Free, Pro, and Enterprise tiers</label></li>
+                        <li><input type="checkbox" id="p1_5"><label for="p1_5">CTA buttons ("Get Started", "Sign Up") present and clickable</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Navigation</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="p1_6"><label for="p1_6">Logo/Home button in navbar links back to landing</label></li>
+                        <li><input type="checkbox" id="p1_7"><label for="p1_7">"Login" button in navbar links to /login</label></li>
+                        <li><input type="checkbox" id="p1_8"><label for="p1_8">"Sign Up" button in navbar links to /signup</label></li>
+                        <li><input type="checkbox" id="p1_9"><label for="p1_9">All CTAs redirect to /signup or /login appropriately</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Responsive Design</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="p1_10"><label for="p1_10">Layout adapts to mobile (< 768px)</label></li>
+                        <li><input type="checkbox" id="p1_11"><label for="p1_11">Feature cards stack vertically on mobile</label></li>
+                        <li><input type="checkbox" id="p1_12"><label for="p1_12">Images scale appropriately across screen sizes</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Professional marketing landing page with clear hierarchy, compelling copy, and smooth navigation. No auth required. All external links work correctly.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Broken image links or missing feature icons</li>
+                        <li>Pricing cards showing incorrect limits or features</li>
+                        <li>CTA buttons redirecting to wrong pages</li>
+                        <li>Navbar not sticky or not responsive</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Login Page</div>
+                        <div class="page-route">GET /login</div>
+                    </div>
+                    <span class="badge badge-public">Public</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Page Layout</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="p2_1"><label for="p2_1">Page loads with email/password form visible</label></li>
+                        <li><input type="checkbox" id="p2_2"><label for="p2_2">Google OAuth button present and styled</label></li>
+                        <li><input type="checkbox" id="p2_3"><label for="p2_3">Magic link option visible (or email field for magic link)</label></li>
+                        <li><input type="checkbox" id="p2_4"><label for="p2_4">"Don't have an account?" link points to /signup</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Google OAuth Flow</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="p2_5"><label for="p2_5">Click "Login with Google" opens Google auth modal</label></li>
+                        <li><input type="checkbox" id="p2_6"><label for="p2_6">After auth, redirects to /select-plan (if first time)</label></li>
+                        <li><input type="checkbox" id="p2_7"><label for="p2_7">After auth, redirects to /dashboard (if returning user)</label></li>
+                        <li><input type="checkbox" id="p2_8"><label for="p2_8">User email and profile picture populated from Google account</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Magic Link Flow</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="p2_9"><label for="p2_9">Enter valid email address</label></li>
+                        <li><input type="checkbox" id="p2_10"><label for="p2_10">Click "Send Magic Link"</label></li>
+                        <li><input type="checkbox" id="p2_11"><label for="p2_11">Success message appears ("Check your email")</label></li>
+                        <li><input type="checkbox" id="p2_12"><label for="p2_12">Email contains clickable magic link (in test env)</label></li>
+                        <li><input type="checkbox" id="p2_13"><label for="p2_13">Clicking link logs user in without password</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Smooth login experience via Google OAuth or magic link. First-time users directed to plan selection, returning users to dashboard. No password required.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Google OAuth modal not opening</li>
+                        <li>Magic link not sent to email</li>
+                        <li>Magic link expired or invalid on click</li>
+                        <li>Incorrect redirect after successful login</li>
+                        <li>Session not persisting after login</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Signup Page</div>
+                        <div class="page-route">GET /signup</div>
+                    </div>
+                    <span class="badge badge-public">Public</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Form Fields</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="p3_1"><label for="p3_1">Name input field present and focused</label></li>
+                        <li><input type="checkbox" id="p3_2"><label for="p3_2">Email input field present with valid email validation</label></li>
+                        <li><input type="checkbox" id="p3_3"><label for="p3_3">Password input field (if applicable)</label></li>
+                        <li><input type="checkbox" id="p3_4"><label for="p3_4">Confirm password field (if applicable)</label></li>
+                        <li><input type="checkbox" id="p3_5"><label for="p3_5">Submit button labeled "Create Account"</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Validation & Submission</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="p3_6"><label for="p3_6">Submit without name shows validation error</label></li>
+                        <li><input type="checkbox" id="p3_7"><label for="p3_7">Submit with invalid email shows error</label></li>
+                        <li><input type="checkbox" id="p3_8"><label for="p3_8">Submit with passwords not matching shows error</label></li>
+                        <li><input type="checkbox" id="p3_9"><label for="p3_9">Valid submission creates user and redirects to /select-plan</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Google OAuth</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="p3_10"><label for="p3_10">"Sign up with Google" button visible</label></li>
+                        <li><input type="checkbox" id="p3_11"><label for="p3_11">Clicking Google button opens auth modal</label></li>
+                        <li><input type="checkbox" id="p3_12"><label for="p3_12">After OAuth, auto-populates name and email</label></li>
+                        <li><input type="checkbox" id="p3_13"><label for="p3_13">User can proceed to /select-plan or complete profile</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Navigation</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="p3_14"><label for="p3_14">"Already have an account?" link points to /login</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Streamlined signup with optional Google OAuth or email/password. Name and email collected. User redirected to plan selection after successful signup.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Validation errors unclear or hidden</li>
+                        <li>Email duplication not prevented (shows error but unclear)</li>
+                        <li>OAuth not pre-filling name and email</li>
+                        <li>Redirect looping or missing /select-plan page</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Join Session by Code</div>
+                        <div class="page-route">GET /join/[code]</div>
+                    </div>
+                    <span class="badge badge-observer">Observer</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Public Join (No Auth)</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="p4_1"><label for="p4_1">Page accessible without login</label></li>
+                        <li><input type="checkbox" id="p4_2"><label for="p4_2">Valid 6-digit code shows session details</label></li>
+                        <li><input type="checkbox" id="p4_3"><label for="p4_3">Invalid or expired code shows error message</label></li>
+                        <li><input type="checkbox" id="p4_4"><label for="p4_4">Session name, team name, estimated story count displayed</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Join as Guest/Observer</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="p4_5"><label for="p4_5">Guest name input field present</label></li>
+                        <li><input type="checkbox" id="p4_6"><label for="p4_6">Can enter guest name without email</label></li>
+                        <li><input type="checkbox" id="p4_7"><label for="p4_7">Clicking "Join" adds guest to session and enters voting room</label></li>
+                        <li><input type="checkbox" id="p4_8"><label for="p4_8">Guest can see voting stories but labeled as "Observer"</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Join as Authenticated User</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="p4_9"><label for="p4_9">Authenticated user can join with one click (name pre-filled)</label></li>
+                        <li><input type="checkbox" id="p4_10"><label for="p4_10">User added to session with correct role/organization</label></li>
+                        <li><input type="checkbox" id="p4_11"><label for="p4_11">User can access /session/[sessionId] with voting permissions</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Easy public join mechanism for observers and new team members. Works with or without authentication. 6-digit code easy to share verbally.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Code generation not unique or collision prone</li>
+                        <li>Expired sessions still showing as joinable</li>
+                        <li>Guest joining multiple times with same name</li>
+                        <li>Session member list not updating in real-time</li>
+                        <li>Observer not seeing voting cards (if allowed)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- AUTH FLOW SECTION -->
+        <div class="section" id="auth-flow">
+            <h2 class="section-title">Authentication Flow</h2>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Plan Selection & Organization Setup</div>
+                        <div class="page-route">GET /select-plan</div>
+                    </div>
+                    <span class="badge badge-member">Authenticated User</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Plan Selection</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="a1_1"><label for="a1_1">Page shows three plan tiers: Free, Pro, Enterprise</label></li>
+                        <li><input type="checkbox" id="a1_2"><label for="a1_2">Each plan card shows price (Free = $0/mo) and feature list</label></li>
+                        <li><input type="checkbox" id="a1_3"><label for="a1_3">Free plan: unlimited sessions, basic analytics</label></li>
+                        <li><input type="checkbox" id="a1_4"><label for="a1_4">Pro plan: velocity trends, estimation accuracy, priority support</label></li>
+                        <li><input type="checkbox" id="a1_5"><label for="a1_5">Enterprise plan: audit logs, SSO, custom branding</label></li>
+                        <li><input type="checkbox" id="a1_6"><label for="a1_6">Select button on each plan card</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Organization Setup</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="a1_7"><label for="a1_7">After selecting plan, organization name form appears</label></li>
+                        <li><input type="checkbox" id="a1_8"><label for="a1_8">Org name input auto-focused with helpful placeholder</label></li>
+                        <li><input type="checkbox" id="a1_9"><label for="a1_9">Org slug auto-generated from name and editable</label></li>
+                        <li><input type="checkbox" id="a1_10"><label for="a1_10">Empty org name shows validation error</label></li>
+                        <li><input type="checkbox" id="a1_11"><label for="a1_11">Submit creates organization and first member (current user)</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Redirect & Session</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="a1_12"><label for="a1_12">After org creation, redirects to /dashboard</label></li>
+                        <li><input type="checkbox" id="a1_13"><label for="a1_13">User is automatically Admin of new organization</label></li>
+                        <li><input type="checkbox" id="a1_14"><label for="a1_14">Session includes org context (can be verified in profile)</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Smooth onboarding flow. User selects plan, sets org name, and lands on dashboard ready to create teams/sessions.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Plan selection not persisting to organization</li>
+                        <li>Org slug not unique (duplicate detection)</li>
+                        <li>User not assigned correct role (should be Admin)</li>
+                        <li>Redirect loop if not properly authenticated</li>
+                        <li>Plan limits not enforced (e.g., Free plan can create unlimited sessions)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUPER ADMIN SECTION -->
+        <div class="section" id="super-admin">
+            <h2 class="section-title">Super Admin Flow</h2>
+
+            <div class="flow-diagram">
+                <div class="flow-item"><strong>Login</strong></div>
+                <div class="flow-item"><span class="flow-arrow">→</span></div>
+                <div class="flow-item"><strong>/admin</strong></div>
+                <div class="flow-item"><span class="flow-arrow">→</span></div>
+                <div class="flow-item"><strong>/admin/organizations</strong></div>
+                <div class="flow-item"><span class="flow-arrow">→</span></div>
+                <div class="flow-item"><strong>Manage Plans</strong></div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Admin Dashboard</div>
+                        <div class="page-route">GET /admin</div>
+                    </div>
+                    <span class="badge badge-super-admin">Super Admin</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Access Control</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="sa1_1"><label for="sa1_1">Only super admin accounts can access (Piyush)</label></li>
+                        <li><input type="checkbox" id="sa1_2"><label for="sa1_2">Non-super-admins redirected to /dashboard with error</label></li>
+                        <li><input type="checkbox" id="sa1_3"><label for="sa1_3">Unauthenticated users redirected to /login</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Dashboard Metrics</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="sa1_4"><label for="sa1_4">Total organizations count displayed (stat card)</label></li>
+                        <li><input type="checkbox" id="sa1_5"><label for="sa1_5">Total users across all orgs displayed</label></li>
+                        <li><input type="checkbox" id="sa1_6"><label for="sa1_6">Total sessions across all orgs displayed</label></li>
+                        <li><input type="checkbox" id="sa1_7"><label for="sa1_7">Monthly active users chart visible</label></li>
+                        <li><input type="checkbox" id="sa1_8"><label for="sa1_8">Plan distribution pie chart (Free/Pro/Enterprise)</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Navigation</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="sa1_9"><label for="sa1_9">Sidebar or nav menu with links to /admin/organizations</label></li>
+                        <li><input type="checkbox" id="sa1_10"><label for="sa1_10">Link to /admin/users</label></li>
+                        <li><input type="checkbox" id="sa1_11"><label for="sa1_11">Link to /admin/plans</label></li>
+                        <li><input type="checkbox" id="sa1_12"><label for="sa1_12">Link to /admin/activity</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> High-level platform overview with key metrics. Charts update in real-time or on page load. Clear navigation to detailed admin pages.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Metrics not updating after new org/user creation</li>
+                        <li>Charts missing or not rendering</li>
+                        <li>No access control (anyone can see admin)</li>
+                        <li>Slow page load with large data sets</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Manage Organizations</div>
+                        <div class="page-route">GET /admin/organizations</div>
+                    </div>
+                    <span class="badge badge-super-admin">Super Admin</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Organization List</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="sa2_1"><label for="sa2_1">Table shows all organizations with columns: Name, Plan, Owner, Members, Sessions</label></li>
+                        <li><input type="checkbox" id="sa2_2"><label for="sa2_2">Organizations sortable by any column</label></li>
+                        <li><input type="checkbox" id="sa2_3"><label for="sa2_3">Organizations searchable by name</label></li>
+                        <li><input type="checkbox" id="sa2_4"><label for="sa2_4">Filter by plan (Free/Pro/Enterprise)</label></li>
+                        <li><input type="checkbox" id="sa2_5"><label for="sa2_5">Pagination or scroll for large lists</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Organization Actions</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="sa2_6"><label for="sa2_6">Click org name or row opens org detail view</label></li>
+                        <li><input type="checkbox" id="sa2_7"><label for="sa2_7">Edit button allows changing org name/slug</label></li>
+                        <li><input type="checkbox" id="sa2_8"><label for="sa2_8">Plan selector dropdown to change Free → Pro → Enterprise</label></li>
+                        <li><input type="checkbox" id="sa2_9"><label for="sa2_9">Changing plan updates org immediately</label></li>
+                        <li><input type="checkbox" id="sa2_10"><label for="sa2_10">Delete button with confirmation dialog</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Plan Change Testing</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="sa2_11"><label for="sa2_11">Change Free org to Pro: features unlock, no error</label></li>
+                        <li><input type="checkbox" id="sa2_12"><label for="sa2_12">Change Pro org to Enterprise: audit logs available</label></li>
+                        <li><input type="checkbox" id="sa2_13"><label for="sa2_13">Downgrade Pro to Free: Pro features hidden/disabled, confirm with user</label></li>
+                        <li><input type="checkbox" id="sa2_14"><label for="sa2_14">Plan change reflected in org dashboard immediately</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Complete org management with search, filter, and plan updates. Org owners see changes reflected in their dashboard after plan change.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Plan downgrade not disabling features in real-time</li>
+                        <li>Delete not removing all org data (orphaned records)</li>
+                        <li>Search/filter not working or too slow</li>
+                        <li>No confirmation dialog for destructive actions</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Manage Users</div>
+                        <div class="page-route">GET /admin/users</div>
+                    </div>
+                    <span class="badge badge-super-admin">Super Admin</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>User List</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="sa3_1"><label for="sa3_1">Table shows all users across all orgs</label></li>
+                        <li><input type="checkbox" id="sa3_2"><label for="sa3_2">Columns: Name, Email, Organization, Role, Created Date</label></li>
+                        <li><input type="checkbox" id="sa3_3"><label for="sa3_3">Search by email or name</label></li>
+                        <li><input type="checkbox" id="sa3_4"><label for="sa3_4">Filter by role (Admin/Member/Observer)</label></li>
+                        <li><input type="checkbox" id="sa3_5"><label for="sa3_5">Filter by organization</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>User Actions</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="sa3_6"><label for="sa3_6">Click user opens detail view with all sessions</label></li>
+                        <li><input type="checkbox" id="sa3_7"><label for="sa3_7">Change role dropdown (Admin ↔ Member ↔ Observer)</label></li>
+                        <li><input type="checkbox" id="sa3_8"><label for="sa3_8">Role change updates immediately</label></li>
+                        <li><input type="checkbox" id="sa3_9"><label for="sa3_9">Disable/activate user account toggle</label></li>
+                        <li><input type="checkbox" id="sa3_10"><label for="sa3_10">Delete user with confirmation (removes from all orgs)</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Cross-org user management with role and status controls. Changes reflect immediately in user's org dashboard.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Deleting admin only user leaves org without admin</li>
+                        <li>Role change not reflected in user's /dashboard</label></li>
+                        <li>Search/filter combining too slow</li>
+                        <li>No audit trail for role changes</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Plan Tiers & Features</div>
+                        <div class="page-route">GET /admin/plans</div>
+                    </div>
+                    <span class="badge badge-super-admin">Super Admin</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Plan Overview</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="sa4_1"><label for="sa4_1">Display of Free, Pro, Enterprise plan cards</label></li>
+                        <li><input type="checkbox" id="sa4_2"><label for="sa4_2">Each plan shows: price, user limit, session limit, feature list</label></li>
+                        <li><input type="checkbox" id="sa4_3"><label for="sa4_3">Feature matrix table comparing all three plans</label></li>
+                        <li><input type="checkbox" id="sa4_4"><label for="sa4_4">Checkmarks for included features, X for excluded</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Plan Features Comparison</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="sa4_5"><label for="sa4_5">Free: unlimited sessions, 5 users per org, basic dashboard</label></li>
+                        <li><input type="checkbox" id="sa4_6"><label for="sa4_6">Pro: everything Free + analytics, velocity trends, 25 users</label></li>
+                        <li><input type="checkbox" id="sa4_7"><label for="sa4_7">Enterprise: everything Pro + audit logs, SSO, custom branding, unlimited users</label></li>
+                        <li><input type="checkbox" id="sa4_8"><label for="sa4_8">Edit button to modify plan features (admin only)</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Clear, honest feature comparison. Admins can modify plan definitions if needed. No hardcoded limits.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Features not matching actual implementation</li>
+                        <li>No way to edit plan if business requirements change</li>
+                        <li>Missing feature descriptions or confusing language</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Platform Activity Log</div>
+                        <div class="page-route">GET /admin/activity</div>
+                    </div>
+                    <span class="badge badge-super-admin">Super Admin</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Activity Log Display</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="sa5_1"><label for="sa5_1">Chronological list of all platform events (newest first)</label></li>
+                        <li><input type="checkbox" id="sa5_2"><label for="sa5_2">Columns: Timestamp, Actor (user email), Action, Resource, Organization</label></li>
+                        <li><input type="checkbox" id="sa5_3"><label for="sa5_3">Sample events: org created, user added, plan changed, session started</label></li>
+                        <li><input type="checkbox" id="sa5_4"><label for="sa5_4">Pagination for large logs (1000s of events)</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Filtering & Search</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="sa5_5"><label for="sa5_5">Filter by organization</label></li>
+                        <li><input type="checkbox" id="sa5_6"><label for="sa5_6">Filter by action type (create, update, delete)</label></li>
+                        <li><input type="checkbox" id="sa5_7"><label for="sa5_7">Filter by user (actor)</label></li>
+                        <li><input type="checkbox" id="sa5_8"><label for="sa5_8">Date range picker (from/to)</label></li>
+                        <li><input type="checkbox" id="sa5_9"><label for="sa5_9">Text search in resource names</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Event Details</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="sa5_10"><label for="sa5_10">Click event to see full details (old value → new value)</label></li>
+                        <li><input type="checkbox" id="sa5_11"><label for="sa5_11">For org plan change: shows "Free → Pro" transition</label></li>
+                        <li><input type="checkbox" id="sa5_12"><label for="sa5_12">For user role change: shows "Member → Admin" transition</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Comprehensive audit trail for compliance and debugging. Immutable, timestamped events. Searchable and filterable.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Activity log not recording important actions</li>
+                        <li>Filters not working or returning wrong results</li>
+                        <li>No timestamps or unclear timezone</li>
+                        <li>Old values not captured for audit trail</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN / SCRUM MASTER FLOW SECTION -->
+        <div class="section" id="admin-flow">
+            <h2 class="section-title">Admin / Scrum Master Flow</h2>
+
+            <div class="flow-diagram">
+                <div class="flow-item"><strong>/dashboard</strong></div>
+                <div class="flow-item"><span class="flow-arrow">→</span></div>
+                <div class="flow-item"><strong>Create Team</strong></div>
+                <div class="flow-item"><span class="flow-arrow">→</span></div>
+                <div class="flow-item"><strong>Add Members</strong></div>
+                <div class="flow-item"><span class="flow-arrow">→</span></div>
+                <div class="flow-item"><strong>Start Session</strong></div>
+                <div class="flow-item"><span class="flow-arrow">→</span></div>
+                <div class="flow-item"><strong>Vote & Reveal</strong></div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Dashboard</div>
+                        <div class="page-route">GET /dashboard</div>
+                    </div>
+                    <span class="badge badge-admin">Admin/Member</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Page Layout & Access</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad1_1"><label for="ad1_1">Only accessible after login (auth required)</label></li>
+                        <li><input type="checkbox" id="ad1_2"><label for="ad1_2">Page loads with user's organization context</label></li>
+                        <li><input type="checkbox" id="ad1_3"><label for="ad1_3">Top stat cards visible: Teams, Sessions, Members</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Stats Cards</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad1_4"><label for="ad1_4">"Teams" card shows count of teams in org</label></li>
+                        <li><input type="checkbox" id="ad1_5"><label for="ad1_5">"Sessions" card shows count (this month or total)</label></li>
+                        <li><input type="checkbox" id="ad1_6"><label for="ad1_6">"Members" card shows count of active members</label></li>
+                        <li><input type="checkbox" id="ad1_7"><label for="ad1_7">Stats update in real-time when new items added</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Team List Section</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad1_8"><label for="ad1_8">Scrollable or paginated list of teams</label></li>
+                        <li><input type="checkbox" id="ad1_9"><label for="ad1_9">Each team shows: name, member count, active sessions</label></li>
+                        <li><input type="checkbox" id="ad1_10"><label for="ad1_10">Click team to navigate to /teams/[teamId]</label></li>
+                        <li><input type="checkbox" id="ad1_11"><label for="ad1_11">"Create Team" button prominent at top</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Recent Sessions</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad1_12"><label for="ad1_12">List of 5-10 most recent sessions (last 30 days)</label></li>
+                        <li><input type="checkbox" id="ad1_13"><label for="ad1_13">Each shows: session name, team, date, story count, status</label></li>
+                        <li><input type="checkbox" id="ad1_14"><label for="ad1_14">Click session to open /session/[sessionId]</label></li>
+                        <li><input type="checkbox" id="ad1_15"><label for="ad1_15">"View All Sessions" link</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Quick Actions</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad1_16"><label for="ad1_16">"Quick Join Session" input with join code</label></li>
+                        <li><input type="checkbox" id="ad1_17"><label for="ad1_17">Enter 6-digit code and click "Join"</label></li>
+                        <li><input type="checkbox" id="ad1_18"><label for="ad1_18">Redirects to /session/[sessionId]</label></li>
+                        <li><input type="checkbox" id="ad1_19"><label for="ad1_19">"New Session" button creates session on click</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Clean dashboard with at-a-glance org overview. Quick access to create teams/sessions and join existing ones.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Stats not updating after new team/session creation</li>
+                        <li>Join code input not validating format</li>
+                        <li>Links broken or redirecting incorrectly</li>
+                        <li>Slow page load with many teams/sessions</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Teams Management</div>
+                        <div class="page-route">GET /teams</div>
+                    </div>
+                    <span class="badge badge-admin">Admin/Member</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Teams List</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad2_1"><label for="ad2_1">All teams in org displayed in list or grid</label></li>
+                        <li><input type="checkbox" id="ad2_2"><label for="ad2_2">Each team card shows: name, member count, sessions count</label></li>
+                        <li><input type="checkbox" id="ad2_3"><label for="ad2_3">Search bar filters teams by name (real-time)</label></li>
+                        <li><input type="checkbox" id="ad2_4"><label for="ad2_4">Sort options (alphabetical, most active)</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Create Team</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad2_5"><label for="ad2_5">"Create Team" button visible (top of page or nav)</label></li>
+                        <li><input type="checkbox" id="ad2_6"><label for="ad2_6">Clicking opens modal/form with team name input</label></li>
+                        <li><input type="checkbox" id="ad2_7"><label for="ad2_7">Team name validation (not empty, no special chars)</label></li>
+                        <li><input type="checkbox" id="ad2_8"><label for="ad2_8">Submit creates team and adds user as admin</label></li>
+                        <li><input type="checkbox" id="ad2_9"><label for="ad2_9">New team appears in list immediately</label></li>
+                        <li><input type="checkbox" id="ad2_10"><label for="ad2_10">Clicking new team opens /teams/[teamId]</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Simple team management. Create teams easily, view all teams, search/sort. New teams appear immediately without page refresh.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Create team form not closing after submit</li>
+                        <li>New team not appearing in list</li>
+                        <li>Search not case-insensitive</li>
+                        <li>Duplicate team names allowed</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Team Detail View</div>
+                        <div class="page-route">GET /teams/[teamId]</div>
+                    </div>
+                    <span class="badge badge-admin">Admin/Member</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Members Tab</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad3_1"><label for="ad3_1">Tab shows all team members with columns: Name, Email, Role, Status</label></li>
+                        <li><input type="checkbox" id="ad3_2"><label for="ad3_2">Roles display correctly: Admin, Member, Observer</label></li>
+                        <li><input type="checkbox" id="ad3_3"><label for="ad3_3">"Add Member" button visible</label></li>
+                        <li><input type="checkbox" id="ad3_4"><label for="ad3_4">Clicking "Add Member" opens invite form</label></li>
+                        <li><input type="checkbox" id="ad3_5"><label for="ad3_5">Enter email address of new member</label></li>
+                        <li><input type="checkbox" id="ad3_6"><label for="ad3_6">Select role (Admin/Member/Observer) for new member</label></li>
+                        <li><input type="checkbox" id="ad3_7"><label for="ad3_7">Submit sends invite email with join link</label></li>
+                        <li><input type="checkbox" id="ad3_8"><label for="ad3_8">New member added to list with "Pending" status</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Member Actions</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad3_9"><label for="ad3_9">Click member name to see details (sessions attended)</label></li>
+                        <li><input type="checkbox" id="ad3_10"><label for="ad3_10">Change role dropdown (Admin ↔ Member) for existing members</label></li>
+                        <li><input type="checkbox" id="ad3_11"><label for="ad3_11">Remove member button with confirmation</label></li>
+                        <li><input type="checkbox" id="ad3_12"><label for="ad3_12">Removing member removes from all team sessions</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Sessions Tab</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad3_13"><label for="ad3_13">Tab shows all sessions for this team</label></li>
+                        <li><input type="checkbox" id="ad3_14"><label for="ad3_14">Each session shows: name, date, stories count, status (active/completed)</label></li>
+                        <li><input type="checkbox" id="ad3_15"><label for="ad3_15">Click session to open /session/[sessionId]</label></li>
+                        <li><input type="checkbox" id="ad3_16"><label for="ad3_16">"Start New Session" button at top</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Settings Tab</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad3_17"><label for="ad3_17">Team name edit field</label></li>
+                        <li><input type="checkbox" id="ad3_18"><label for="ad3_18">Team description/notes optional field</label></li>
+                        <li><input type="checkbox" id="ad3_19"><label for="ad3_19">Delete team button with confirmation</label></li>
+                        <li><input type="checkbox" id="ad3_20"><label for="ad3_20">Deleting team removes all sessions and data</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Complete team management. Add/remove members, manage roles, view sessions. Tab-based navigation.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Invite email not sent or containing broken links</li>
+                        <li>Pending members not showing status</label></li>
+                        <li>Role change not reflected in session voting</label></li>
+                        <li>Delete not removing sessions properly</label></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Voting Room (Core Feature)</div>
+                        <div class="page-route">GET /session/[sessionId]</div>
+                    </div>
+                    <span class="badge badge-admin">Admin/Member</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Session Setup</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad4_1"><label for="ad4_1">Session page loads with team context</label></li>
+                        <li><input type="checkbox" id="ad4_2"><label for="ad4_2">Session name and join code (6-digit) displayed at top</label></li>
+                        <li><input type="checkbox" id="ad4_3"><label for="ad4_3">Member list panel shows all active participants</label></li>
+                        <li><input type="checkbox" id="ad4_4"><label for="ad4_4">Real-time updates when members join (WebSocket/polling)</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Story Sidebar</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad4_5"><label for="ad4_5">Left sidebar shows list of stories to estimate</label></li>
+                        <li><input type="checkbox" id="ad4_6"><label for="ad4_6">Each story shows: title, description, current estimate (if set)</label></li>
+                        <li><input type="checkbox" id="ad4_7"><label for="ad4_7">Highlighted story indicates which is being voted on</label></li>
+                        <li><input type="checkbox" id="ad4_8"><label for="ad4_8">Click story to switch to it (reset voting)</label></li>
+                        <li><input type="checkbox" id="ad4_9"><label for="ad4_9">"Add Story" button to add new stories during session</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Voting Cards</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad4_10"><label for="ad4_10">Fibonacci sequence cards displayed: 0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, ...</label></li>
+                        <li><input type="checkbox" id="ad4_11"><label for="ad4_11">Click card to cast vote (immediate visual feedback)</label></li>
+                        <li><input type="checkbox" id="ad4_12"><label for="ad4_12">Selected card changes color/style to show selected state</label></li>
+                        <li><input type="checkbox" id="ad4_13"><label for="ad4_13">Vote counts update in real-time (shows "X votes" or names if reveal mode)</label></li>
+                        <li><input type="checkbox" id="ad4_14"><label for="ad4_14">Admin can see votes before reveal</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Voting Controls</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad4_15"><label for="ad4_15">"Start Vote" button initiates voting round (resets cards)</label></li>
+                        <li><input type="checkbox" id="ad4_16"><label for="ad4_16">"Reveal" button shows all votes once all members voted (or timer expires)</label></li>
+                        <li><input type="checkbox" id="ad4_17"><label for="ad4_17">Admin can reveal early (button shows member count: "4/5 voted")</label></li>
+                        <li><input type="checkbox" id="ad4_18"><label for="ad4_18">"Re-vote" button resets and starts new round</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Results Display</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad4_19"><label for="ad4_19">After reveal, show distribution: member name → card value</label></li>
+                        <li><input type="checkbox" id="ad4_20"><label for="ad4_20">Calculate and display average estimate</label></li>
+                        <li><input type="checkbox" id="ad4_21"><label for="ad4_21">If all members voted same: "Consensus" badge shows</label></li>
+                        <li><input type="checkbox" id="ad4_22"><label for="ad4_22">If wide range: suggest discussion before finalizing</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Final Estimate</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad4_23"><label for="ad4_23">"Set Estimate" button appears after reveal</label></li>
+                        <li><input type="checkbox" id="ad4_24"><label for="ad4_24">Can accept average, override with custom value, or one of the voted values</label></li>
+                        <li><input type="checkbox" id="ad4_25"><label for="ad4_25">Setting estimate moves to next story automatically</label></li>
+                        <li><input type="checkbox" id="ad4_26"><label for="ad4_26">Story shows final estimate in sidebar</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Session Controls</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad4_27"><label for="ad4_27">"End Session" button at bottom</label></li>
+                        <li><input type="checkbox" id="ad4_28"><label for="ad4_28">Confirm dialog before ending</label></li>
+                        <li><input type="checkbox" id="ad4_29"><label for="ad4_29">Ending session locks voting, saves all estimates</label></li>
+                        <li><input type="checkbox" id="ad4_30"><label for="ad4_30">Redirects to session summary view</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Smooth, real-time voting experience. Clear feedback for every action. Seamless story progression. Works with 2-20 team members.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Vote not updating in real-time (WebSocket lag)</li>
+                        <li>Member list not syncing (duplicate names, missing people)</li>
+                        <li>Reveal button showing votes before clicked</li>
+                        <li>Re-vote not clearing previous votes</li>
+                        <li>Session stuck in voting state when member disconnects</li>
+                        <li>Final estimate calculation wrong (includes non-voting members)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Organization Settings</div>
+                        <div class="page-route">GET /settings</div>
+                    </div>
+                    <span class="badge badge-admin">Admin</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Organization Info</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad5_1"><label for="ad5_1">Current org name displayed</label></li>
+                        <li><input type="checkbox" id="ad5_2"><label for="ad5_2">Edit org name with text input</label></li>
+                        <li><input type="checkbox" id="ad5_3"><label for="ad5_3">Org slug shown (for public URLs)</label></li>
+                        <li><input type="checkbox" id="ad5_4"><label for="ad5_4">Current plan displayed (Free/Pro/Enterprise)</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Plan Display</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad5_5"><label for="ad5_5">Feature list for current plan shown</label></li>
+                        <li><input type="checkbox" id="ad5_6"><label for="ad5_6">Usage stats (sessions/month, members used)</label></li>
+                        <li><input type="checkbox" id="ad5_7"><label for="ad5_7">Warning if approaching plan limits (e.g., "4/5 users")</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Danger Zone</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad5_8"><label for="ad5_8">"Delete Organization" button in red</label></li>
+                        <li><input type="checkbox" id="ad5_9"><label for="ad5_9">Confirmation dialog with warning about data loss</label></li>
+                        <li><input type="checkbox" id="ad5_10"><label for="ad5_10">Requires typing org name to confirm deletion</label></li>
+                        <li><input type="checkbox" id="ad5_11"><label for="ad5_11">Deleting removes all teams, sessions, and members</label></li>
+                        <li><input type="checkbox" id="ad5_12"><label for="ad5_12">Redirects to login after deletion</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Simple org management. Non-destructive edits easily available, destructive actions well-protected.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Org name change not persisting</li>
+                        <li>Delete not removing all org data</li>
+                        <li>No confirmation for delete (dangerous!)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Billing & Plan Upgrade</div>
+                        <div class="page-route">GET /settings/billing</div>
+                    </div>
+                    <span class="badge badge-admin">Admin</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Plan Comparison</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad6_1"><label for="ad6_1">Three plan cards displayed: Free, Pro, Enterprise</label></li>
+                        <li><input type="checkbox" id="ad6_2"><label for="ad6_2">Current plan highlighted or marked "Your Plan"</label></li>
+                        <li><input type="checkbox" id="ad6_3"><label for="ad6_3">Each plan shows: price, included features, user/session limits</label></li>
+                        <li><input type="checkbox" id="ad6_4"><label for="ad6_4">Feature comparison table (checkmarks/X marks)</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Upgrade Flow</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad6_5"><label for="ad6_5">"Upgrade to Pro" button visible on Free plan</label></li>
+                        <li><input type="checkbox" id="ad6_6"><label for="ad6_6">Clicking opens Stripe checkout (or payment form)</label></li>
+                        <li><input type="checkbox" id="ad6_7"><label for="ad6_7">Checkout shows plan details: Pro at $X/month</label></li>
+                        <li><input type="checkbox" id="ad6_8"><label for="ad6_8">Can enter card details and complete payment</label></li>
+                        <li><input type="checkbox" id="ad6_9"><label for="ad6_9">After payment, org plan changes to Pro</label></li>
+                        <li><input type="checkbox" id="ad6_10"><label for="ad6_10">Features unlock immediately (analytics, audit logs, etc.)</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Billing Info</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad6_11"><label for="ad6_11">Invoice history shown if subscribed</label></li>
+                        <li><input type="checkbox" id="ad6_12"><label for="ad6_12">Current subscription details (renews on X)</label></li>
+                        <li><input type="checkbox" id="ad6_13"><label for="ad6_13">Cancel subscription button (if applicable)</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Clear pricing, smooth upgrade flow. Payment processed securely. Features unlock without page refresh.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Stripe integration errors or payment failures</li>
+                        <li>Plan upgrade stuck in progress state</li>
+                        <li>Features not unlocking after payment</li>
+                        <li>Billing info not showing correct subscription</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Member Invitations & Roles</div>
+                        <div class="page-route">GET /settings/members</div>
+                    </div>
+                    <span class="badge badge-admin">Admin</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Members List</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad7_1"><label for="ad7_1">Table of all org members with columns: Name, Email, Role, Status, Joined</label></li>
+                        <li><input type="checkbox" id="ad7_2"><label for="ad7_2">Roles color-coded (Admin = red, Member = blue, Observer = green)</label></li>
+                        <li><input type="checkbox" id="ad7_3"><label for="ad7_3">Status shows: Active, Pending (invited), Disabled</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Invite Member</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad7_4"><label for="ad7_4">"Invite Member" button at top</label></li>
+                        <li><input type="checkbox" id="ad7_5"><label for="ad7_5">Modal form with email input</label></li>
+                        <li><input type="checkbox" id="ad7_6"><label for="ad7_6">Role selector (Admin/Member/Observer)</label></li>
+                        <li><input type="checkbox" id="ad7_7"><label for="ad7_7">Send invite button</label></li>
+                        <li><input type="checkbox" id="ad7_8"><label for="ad7_8">Invite email sent with join link</label></li>
+                        <li><input type="checkbox" id="ad7_9"><label for="ad7_9">Member added to list with "Pending" status</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Role Management</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad7_10"><label for="ad7_10">Click member to open detail view</label></li>
+                        <li><input type="checkbox" id="ad7_11"><label for="ad7_11">Role selector shows current and can change</label></li>
+                        <li><input type="checkbox" id="ad7_12"><label for="ad7_12">Admin role change confirmation (must keep at least 1 admin)</label></li>
+                        <li><input type="checkbox" id="ad7_13"><label for="ad7_13">Save role change</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Member Actions</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad7_14"><label for="ad7_14">Remove member button (with confirmation)</label></li>
+                        <li><input type="checkbox" id="ad7_15"><label for="ad7_15">Removing member removes from all teams/sessions</label></li>
+                        <li><input type="checkbox" id="ad7_16"><label for="ad7_16">Can resend invite if pending</label></li>
+                        <li><input type="checkbox" id="ad7_17"><label for="ad7_17">Disable/activate member toggle</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Easy org-wide member management. Invites, roles, and permissions well-organized.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Invite not sent or containing wrong link</li>
+                        <li>Role change not reflected in sessions</li>
+                        <li>Deleting last admin breaks org</li>
+                        <li>Member status not updating when joining</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Analytics & Metrics</div>
+                        <div class="page-route">GET /analytics</div>
+                    </div>
+                    <span class="badge badge-admin">Admin (Pro+ only)</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Access & Plan Gating</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad8_1"><label for="ad8_1">Free plan users redirected to upgrade page</label></li>
+                        <li><input type="checkbox" id="ad8_2"><label for="ad8_2">Pro/Enterprise users can access</label></li>
+                        <li><input type="checkbox" id="ad8_3"><label for="ad8_3">Analytics link visible in nav only for Pro+</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Session Metrics</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad8_4"><label for="ad8_4">Total sessions count by time period (month/quarter/year)</label></li>
+                        <li><input type="checkbox" id="ad8_5"><label for="ad8_5">Average session duration</label></li>
+                        <li><input type="checkbox" id="ad8_6"><label for="ad8_6">Participation rate (% of team members voting)</label></li>
+                        <li><input type="checkbox" id="ad8_7"><label for="ad8_7">Most active team/teams</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Velocity Trends</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad8_8"><label for="ad8_8">Line chart showing average estimate per sprint/week</label></li>
+                        <li><input type="checkbox" id="ad8_9"><label for="ad8_9">Trend analysis (up/down arrow, % change)</label></li>
+                        <li><input type="checkbox" id="ad8_10"><label for="ad8_10">Filter by team</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Estimation Accuracy</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad8_11"><label for="ad8_11">Consensus rate (% of stories with unanimous voting)</label></li>
+                        <li><input type="checkbox" id="ad8_12"><label for="ad8_12">Estimation range distribution (how spread out are votes)</label></li>
+                        <li><input type="checkbox" id="ad8_13"><label for="ad8_13">Most common story point (mode)</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Professional analytics dashboard. Charts update with new sessions. Exportable data (optional).
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Plan gating not working (Free user accessing Pro features)</li>
+                        <li>Charts not updating with new sessions</li>
+                        <li>Metrics calculation errors (consensus rate wrong)</li>
+                        <li>No data or empty charts</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Audit Log</div>
+                        <div class="page-route">GET /audit-log</div>
+                    </div>
+                    <span class="badge badge-admin">Admin (Enterprise only)</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Access & Plan Gating</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad9_1"><label for="ad9_1">Free/Pro users redirected to upgrade page</label></li>
+                        <li><input type="checkbox" id="ad9_2"><label for="ad9_2">Enterprise users can access</label></li>
+                        <li><input type="checkbox" id="ad9_3"><label for="ad9_3">Audit Log link visible in nav only for Enterprise</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Audit Log Display</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad9_4"><label for="ad9_4">Chronological list of org events (newest first)</label></li>
+                        <li><input type="checkbox" id="ad9_5"><label for="ad9_5">Columns: Timestamp, Actor, Action, Resource, Details</label></li>
+                        <li><input type="checkbox" id="ad9_6"><label for="ad9_6">Sample actions: team created, member added, session started, estimate set</label></li>
+                        <li><input type="checkbox" id="ad9_7"><label for="ad9_7">Pagination for large logs</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Filtering</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="ad9_8"><label for="ad9_8">Filter by action type (create, update, delete)</label></li>
+                        <li><input type="checkbox" id="ad9_9"><label for="ad9_9">Filter by actor (user)</label></li>
+                        <li><input type="checkbox" id="ad9_10"><label for="ad9_10">Date range picker</label></li>
+                        <li><input type="checkbox" id="ad9_11"><label for="ad9_11">Text search in resource names</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Comprehensive audit trail for enterprise compliance. All org actions recorded with timestamps and actors.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Events not recorded for some actions</li>
+                        <li>No actor info (who made change?)</li>
+                        <li>Timestamps unclear (timezone?)</li>
+                        <li>Filters slow or not working</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- MEMBER / OBSERVER FLOW SECTION -->
+        <div class="section" id="member-flow">
+            <h2 class="section-title">Team Member / Observer Flow</h2>
+
+            <div class="flow-diagram">
+                <div class="flow-item"><strong>Receive Invite</strong></div>
+                <div class="flow-item"><span class="flow-arrow">→</span></div>
+                <div class="flow-item"><strong>Click Link</strong></div>
+                <div class="flow-item"><span class="flow-arrow">→</span></div>
+                <div class="flow-item"><strong>Join Team</strong></div>
+                <div class="flow-item"><span class="flow-arrow">→</span></div>
+                <div class="flow-item"><strong>Participate in Sessions</strong></div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Member Invitation Email</div>
+                        <div class="page-route">Email Flow</div>
+                    </div>
+                    <span class="badge badge-member">Team Member</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Email Content</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="tm1_1"><label for="tm1_1">Email subject line includes org/team name</label></li>
+                        <li><input type="checkbox" id="tm1_2"><label for="tm1_2">From address is no-reply@pointit.io or similar</label></li>
+                        <li><input type="checkbox" id="tm1_3"><label for="tm1_3">Email body greets inviter name</label></li>
+                        <li><input type="checkbox" id="tm1_4"><label for="tm1_4">Email includes org name, team name, and role</label></li>
+                        <li><input type="checkbox" id="tm1_5"><label for="tm1_5">CTA button: "Join [Team Name]"</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Invite Link</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="tm1_6"><label for="tm1_6">Link is unique and time-limited (24-48 hours)</label></li>
+                        <li><input type="checkbox" id="tm1_7"><label for="tm1_7">Clicking link takes user to join page or login</label></li>
+                        <li><input type="checkbox" id="tm1_8"><label for="tm1_8">If already logged in, adds user to team immediately</label></li>
+                        <li><input type="checkbox" id="tm1_9"><label for="tm1_9">If not logged in, redirects to /login, then adds to team</label></li>
+                        <li><input type="checkbox" id="tm1_10"><label for="tm1_10">Expired link shows error message</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Professional invite email with clear CTA and working join link.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Email not sent at all</li>
+                        <li>Link broken or redirecting wrong</li>
+                        <li>Link expiring too quickly or never</li>
+                        <li>User added to org instead of team</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Join Team via Invite Link</div>
+                        <div class="page-route">Invite Link Handler</div>
+                    </div>
+                    <span class="badge badge-member">Team Member</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Authenticated User Flow</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="tm2_1"><label for="tm2_1">User already logged in receives confirmation page</label></li>
+                        <li><input type="checkbox" id="tm2_2"><label for="tm2_2">Shows: "Join [Team Name] in [Org Name]"</label></li>
+                        <li><input type="checkbox" id="tm2_3"><label for="tm2_3">Role displayed: "You will be added as [Role]"</label></li>
+                        <li><input type="checkbox" id="tm2_4"><label for="tm2_4">"Confirm" button to accept</label></li>
+                        <li><input type="checkbox" id="tm2_5"><label for="tm2_5">Clicking confirm adds user to team</label></li>
+                        <li><input type="checkbox" id="tm2_6"><label for="tm2_6">Redirects to /dashboard or /teams/[teamId]</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Unauthenticated User Flow</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="tm2_7"><label for="tm2_7">Not logged in user redirected to /login</label></li>
+                        <li><input type="checkbox" id="tm2_8"><label for="tm2_8">Invite context preserved (team name shown after login)</label></li>
+                        <li><input type="checkbox" id="tm2_9"><label for="tm2_9">After login, user automatically added to team</label></li>
+                        <li><input type="checkbox" id="tm2_10"><label for="tm2_10">Redirects to team page or dashboard</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Seamless invite flow. Works whether user is logged in or not. No friction.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Invite context lost after login</li>
+                        <li>User not added to team after confirming</li>
+                        <li>Wrong redirect after join</li>
+                        <li>Duplicate membership if rejoining</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Join Session by 6-Digit Code</div>
+                        <div class="page-route">GET /join/[code]</div>
+                    </div>
+                    <span class="badge badge-member">Team Member/Observer</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Code Entry (No Auth Required)</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="tm3_1"><label for="tm3_1">Share link /join/ABC123 (or direct code)</label></li>
+                        <li><input type="checkbox" id="tm3_2"><label for="tm3_2">Page loads without requiring login</label></li>
+                        <li><input type="checkbox" id="tm3_3"><label for="tm3_3">Session details displayed (name, team, stories)</label></li>
+                        <li><input type="checkbox" id="tm3_4"><label for="tm3_4">Input field for guest/member name</label></li>
+                        <li><input type="checkbox" id="tm3_5"><label for="tm3_5">Click "Join" button</label></li>
+                        <li><input type="checkbox" id="tm3_6"><label for="tm3_6">User enters voting room with correct permissions</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Easy public join. Guest can participate as observer. Team member gets full access.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Code case sensitivity (ABC vs abc)</li>
+                        <li>Expired code still joinable</li>
+                        <li>Observer seeing votes before reveal</li>
+                        <li>Guest unable to vote when should be able to</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Member Participation in Sessions</div>
+                        <div class="page-route">GET /session/[sessionId]</div>
+                    </div>
+                    <span class="badge badge-member">Team Member</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Session Access</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="tm4_1"><label for="tm4_1">Member can access /session/[sessionId] if in team</label></li>
+                        <li><input type="checkbox" id="tm4_2"><label for="tm4_2">Voting cards visible and clickable</label></li>
+                        <li><input type="checkbox" id="tm4_3"><label for="tm4_3">Member list shows all participants</label></li>
+                        <li><input type="checkbox" id="tm4_4"><label for="tm4_4">Story sidebar shows list of stories</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Voting Mechanics</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="tm4_5"><label for="tm4_5">Click voting card casts vote immediately</label></li>
+                        <li><input type="checkbox" id="tm4_6"><label for="tm4_6">Selected card shows visual feedback</label></li>
+                        <li><input type="checkbox" id="tm4_7"><label for="tm4_7">Can change vote before reveal</label></li>
+                        <li><input type="checkbox" id="tm4_8"><label for="tm4_8">Member sees "3/5 voted" counter updating</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Reveal & Results</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="tm4_9"><label for="tm4_9">After admin clicks "Reveal", member sees all votes</label></li>
+                        <li><input type="checkbox" id="tm4_10"><label for="tm4_10">Can see own vote highlighted</label></li>
+                        <li><input type="checkbox" id="tm4_11"><label for="tm4_11">Can see average and distribution</label></li>
+                        <li><input type="checkbox" id="tm4_12"><label for="tm4_12">Cannot change vote after reveal</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Observer Restrictions</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="tm4_13"><label for="tm4_13">Observer can see stories but cannot vote</label></li>
+                        <li><input type="checkbox" id="tm4_13b"><label for="tm4_13b">Observer can see results after reveal</label></li>
+                        <li><input type="checkbox" id="tm4_14"><label for="tm4_14">Observer cannot click voting cards</label></li>
+                        <li><input type="checkbox" id="tm4_15"><label for="tm4_15">Observer badge displayed next to name</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Full participation for team members. Observer mode working correctly. Real-time updates for all participants.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Member vote not counted in results</li>
+                        <li>Cannot unvote or change vote</li>
+                        <li>Observer able to vote (security issue)</li>
+                        <li>Votes revealed before admin clicks reveal</li>
+                        <li>New member joining doesn't see existing votes</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Member Profile</div>
+                        <div class="page-route">GET /profile</div>
+                    </div>
+                    <span class="badge badge-member">All Authenticated Users</span>
+                </div>
+
+                <div class="test-section">
+                    <h4>Profile Information</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="tm5_1"><label for="tm5_1">Profile page shows user name and email</label></li>
+                        <li><input type="checkbox" id="tm5_2"><label for="tm5_2">Avatar/profile picture displayed</label></li>
+                        <li><input type="checkbox" id="tm5_3"><label for="tm5_3">Current organization displayed</label></li>
+                        <li><input type="checkbox" id="tm5_4"><label for="tm5_4">Role in current org shown (Admin/Member/Observer)</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Editable Fields</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="tm5_5"><label for="tm5_5">Name field editable</label></li>
+                        <li><input type="checkbox" id="tm5_6"><label for="tm5_6">Email field editable (with verification if changed)</label></li>
+                        <li><input type="checkbox" id="tm5_7"><label for="tm5_7">Avatar upload button (optional)</label></li>
+                        <li><input type="checkbox" id="tm5_8"><label for="tm5_8">Save button persists changes</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Organization & Teams</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="tm5_9"><label for="tm5_9">List of teams user belongs to</label></li>
+                        <li><input type="checkbox" id="tm5_10"><label for="tm5_10">List of organizations (if multi-org)</label></li>
+                        <li><input type="checkbox" id="tm5_11"><label for="tm5_11">Role badges show role in each team</label></li>
+                    </ul>
+                </div>
+
+                <div class="test-section">
+                    <h4>Preferences & Logout</h4>
+                    <ul class="checklist">
+                        <li><input type="checkbox" id="tm5_12"><label for="tm5_12">Notification preferences (email digests, etc.)</label></li>
+                        <li><input type="checkbox" id="tm5_13"><label for="tm5_13">Theme preference (light/dark mode if supported)</label></li>
+                        <li><input type="checkbox" id="tm5_14"><label for="tm5_14">Logout button</label></li>
+                    </ul>
+                </div>
+
+                <div class="expected">
+                    <strong>Expected:</strong> Simple profile page. User can edit basic info. See all teams/orgs and roles.
+                </div>
+
+                <div class="issues">
+                    <strong>Watch for:</strong>
+                    <ul>
+                        <li>Changes not saving</li>
+                        <li>Email change not requiring verification</li>
+                        <li>Avatar upload failing</li>
+                        <li>Teams/orgs list incomplete</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- TEST DATA SECTION -->
+        <div class="data-section" id="test-data">
+            <h2>Test Data Overview</h2>
+
+            <div class="data-category">
+                <h3>Organizations</h3>
+                <p>The following test organizations are pre-seeded in the database:</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Plan</th>
+                            <th>Owner</th>
+                            <th>Teams</th>
+                            <th>Members</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Acme Corp</td>
+                            <td>Pro</td>
+                            <td>alice@acme.com</td>
+                            <td>3 teams</td>
+                            <td>12 members</td>
+                        </tr>
+                        <tr>
+                            <td>Startup Labs</td>
+                            <td>Enterprise</td>
+                            <td>bob@startuplabs.com</td>
+                            <td>5 teams</td>
+                            <td>8 members</td>
+                        </tr>
+                        <tr>
+                            <td>Test Org (Free)</td>
+                            <td>Free</td>
+                            <td>test@example.com</td>
+                            <td>1 team</td>
+                            <td>2 members</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="data-category">
+                <h3>Teams</h3>
+                <p>Sample teams within Acme Corp:</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Team Name</th>
+                            <th>Organization</th>
+                            <th>Members</th>
+                            <th>Recent Sessions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Backend Squad</td>
+                            <td>Acme Corp</td>
+                            <td>5</td>
+                            <td>Sprint 2.4 (completed)</td>
+                        </tr>
+                        <tr>
+                            <td>Frontend Crew</td>
+                            <td>Acme Corp</td>
+                            <td>4</td>
+                            <td>Design System Work (active)</td>
+                        </tr>
+                        <tr>
+                            <td>QA & Testing</td>
+                            <td>Acme Corp</td>
+                            <td>3</td>
+                            <td>Automation Suite (completed)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="data-category">
+                <h3>Sample Sessions</h3>
+                <p>Pre-seeded sessions with stories and estimates:</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Session Name</th>
+                            <th>Team</th>
+                            <th>Stories</th>
+                            <th>Status</th>
+                            <th>Join Code</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Sprint 2.4 Kickoff</td>
+                            <td>Backend Squad</td>
+                            <td>8 stories</td>
+                            <td>Completed</td>
+                            <td>ABC123</td>
+                        </tr>
+                        <tr>
+                            <td>API Redesign</td>
+                            <td>Backend Squad</td>
+                            <td>5 stories</td>
+                            <td>Completed</td>
+                            <td>XYZ789</td>
+                        </tr>
+                        <tr>
+                            <td>Login Page Redesign</td>
+                            <td>Frontend Crew</td>
+                            <td>6 stories</td>
+                            <td>Active</td>
+                            <td>DEF456</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="data-category">
+                <h3>Test User Accounts</h3>
+                <p>Credentials for testing different roles:</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Organization</th>
+                            <th>Auth Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>bahetipiyush@gmail.com</td>
+                            <td>Super Admin</td>
+                            <td>All (platform access)</td>
+                            <td>Google OAuth</td>
+                        </tr>
+                        <tr>
+                            <td>alice@acme.com</td>
+                            <td>Org Admin</td>
+                            <td>Acme Corp</td>
+                            <td>Google OAuth or Magic Link</td>
+                        </tr>
+                        <tr>
+                            <td>bob@acme.com</td>
+                            <td>Member</td>
+                            <td>Acme Corp</td>
+                            <td>Google OAuth or Magic Link</td>
+                        </tr>
+                        <tr>
+                            <td>observer@acme.com</td>
+                            <td>Observer</td>
+                            <td>Acme Corp</td>
+                            <td>Google OAuth or Magic Link</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="data-category">
+                <h3>Story Examples</h3>
+                <p>Typical stories seeded for testing estimation:</p>
+                <ul style="margin-left: 1.5rem; color: var(--neutral-700); line-height: 1.8;">
+                    <li><strong>User Authentication:</strong> Implement Google OAuth integration (Medium complexity)</li>
+                    <li><strong>Dashboard Redesign:</strong> New stats cards and team list layout (Large)</li>
+                    <li><strong>Bug Fix:</strong> Fix voting card not updating in real-time (Small)</li>
+                    <li><strong>Database Migration:</strong> Add audit log table for Enterprise (Medium-Large)</li>
+                    <li><strong>API Endpoint:</strong> Create /analytics endpoint with metrics (Medium)</li>
+                    <li><strong>Documentation:</strong> Write API docs for session endpoints (Small)</li>
+                </ul>
+            </div>
+
+            <div class="data-category">
+                <h3>Resetting Test Data</h3>
+                <p>To reset all test data and start fresh:</p>
+                <ol style="margin-left: 1.5rem; color: var(--neutral-700); line-height: 1.8;">
+                    <li>Run database reset script: <code style="background: var(--neutral-100); padding: 0.25rem 0.5rem; border-radius: 3px;">npm run reset:db</code></li>
+                    <li>Re-seed with test data: <code style="background: var(--neutral-100); padding: 0.25rem 0.5rem; border-radius: 3px;">npm run seed:test</code></li>
+                    <li>Verify super admin account exists: <code style="background: var(--neutral-100); padding: 0.25rem 0.5rem; border-radius: 3px;">bahetipiyush@gmail.com</code></li>
+                    <li>Login via Google OAuth and verify admin access</li>
+                </ol>
+            </div>
+        </div>
+
+        <footer>
+            <p>PointIt Planning Poker Testing Guide | Last Updated: April 2026</p>
+            <p>For issues or updates to this guide, please contact the QA team.</p>
+        </footer>
+    </div>
+</body>
+</html>

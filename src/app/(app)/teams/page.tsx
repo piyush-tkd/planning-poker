@@ -189,9 +189,11 @@ export default function TeamsPage() {
                       </Button>
                     </Link>
                     {(role === "admin" || role === "scrum_master") && (
-                      <Button variant="ghost" size="icon" className="text-slate-400">
-                        <Settings className="h-4 w-4" />
-                      </Button>
+                      <Link href={`/teams/${team.id}?tab=settings`}>
+                        <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-700">
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </Link>
                     )}
                   </div>
                 </CardContent>

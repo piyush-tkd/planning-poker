@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth-store";
@@ -28,15 +28,16 @@ interface SessionTemplate {
   stories: { title: string; description?: string }[];
 }
 
-export default function TeamDetailPage() {
+function TeamDetailContent() {
   const params = useParams();
   const teamId = params.teamId as string;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentOrg, membership } = useAuthStore();
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<(TeamMember & { org_member: OrgMember })[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [tab, setTab] = useState("members");
+  const [tab, setTab] = useState(searchParams.get("tab") ?? "members");
   const [showInvite, setShowInvite] = useState(false);
   const [showNewSession, setShowNewSession] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -441,5 +442,13 @@ export default function TeamDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function TeamDetailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+      <TeamDetailContent />
+    </Suspense>
   );
 }

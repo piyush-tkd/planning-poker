@@ -67,6 +67,11 @@ export default function VotingRoomPage() {
   const [statusCommentError, setStatusCommentError] = useState<string | null>(null);
   const [showSmNote, setShowSmNote] = useState<"no_consensus" | "no_time" | null>(null);
   const [smNote, setSmNote] = useState("");
+  // Observer comments
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [showComments, setShowComments] = useState(false);
+  const [submittingComment, setSubmittingComment] = useState(false);
   // Timer state
   const [timerActive, setTimerActive] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -85,6 +90,7 @@ export default function VotingRoomPage() {
   useEffect(() => {
     loadSession();
     checkJiraConnection();
+    loadComments();
     return () => { reset(); };
   }, [sessionId]);
 
@@ -117,6 +123,21 @@ export default function VotingRoomPage() {
 
     return () => { supabase.removeChannel(channel); };
   }, [session, story?.id, stories]);
+
+  // ── Realtime: comments ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!sessionId) return;
+    const ch = supabase
+      .channel(`comments:${sessionId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "story_comments", filter: `session_id=eq.${sessionId}` },
+        (payload) => setComments((prev) => [...prev, payload.new])
+      )
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "story_comments", filter: `session_id=eq.${sessionId}` },
+        (payload) => setComments((prev) => prev.filter((c) => c.id !== payload.old.id))
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [sessionId]);
 
   // ── Timer broadcast channel (stable — lives for the whole session) ──
   useEffect(() => {
@@ -168,6 +189,29 @@ export default function VotingRoomPage() {
     setTimerActive(false);
     setTimerSeconds(0);
     timerChannelRef.current?.send({ type: "broadcast", event: "timer", payload: { action: "stop" } });
+  };
+
+  const loadComments = async () => {
+    const { data } = await supabase
+      .from("story_comments")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("created_at", { ascending: true });
+    if (data) setComments(data);
+  };
+
+  const submitComment = async () => {
+    if (!newComment.trim() || !story || !user) return;
+    setSubmittingComment(true);
+    const { error } = await supabase.from("story_comments").insert({
+      session_id: sessionId,
+      story_id: story.id,
+      user_id: user.id,
+      author_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Unknown",
+      content: newComment.trim(),
+    });
+    if (!error) setNewComment("");
+    setSubmittingComment(false);
   };
 
   const loadSession = async () => {
@@ -1160,6 +1204,64 @@ export default function VotingRoomPage() {
                           You&apos;re watching this session. Votes are hidden until the Scrum Master reveals them.
                           {storyVotes.length > 0 && ` ${storyVotes.length} ${storyVotes.length === 1 ? "person has" : "people have"} voted.`}
                         </p>
+                      </div>
+                    )}
+
+                    {/* ── Comments panel (all roles, input for observers) ── */}
+                    {story && (
+                      <div className="mt-6 w-full max-w-lg mx-auto">
+                        <button
+                          onClick={() => setShowComments((v) => !v)}
+                          className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-700 mb-2 transition"
+                        >
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.813 9.813 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                          {comments.filter(c => c.story_id === story.id).length > 0
+                            ? `${comments.filter(c => c.story_id === story.id).length} note${comments.filter(c => c.story_id === story.id).length !== 1 ? "s" : ""}`
+                            : "Add note"}
+                          <span className="ml-auto">{showComments ? "▲" : "▼"}</span>
+                        </button>
+
+                        {showComments && (
+                          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                            {/* Existing comments */}
+                            <div className="max-h-40 overflow-y-auto">
+                              {comments.filter(c => c.story_id === story.id).length === 0 ? (
+                                <p className="text-xs text-slate-400 text-center py-4">No notes yet for this story.</p>
+                              ) : (
+                                comments.filter(c => c.story_id === story.id).map((c) => (
+                                  <div key={c.id} className="px-3 py-2 border-b border-slate-100 last:border-0">
+                                    <div className="flex items-baseline gap-1.5">
+                                      <span className="text-xs font-semibold text-slate-700">{c.author_name}</span>
+                                      <span className="text-[10px] text-slate-400">{new Date(c.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                                      {c.user_id === user?.id && (
+                                        <button onClick={() => supabase.from("story_comments").delete().eq("id", c.id)} className="ml-auto text-[10px] text-red-400 hover:text-red-600">×</button>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-slate-600 mt-0.5">{c.content}</p>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                            {/* Input — all roles can comment */}
+                            <div className="flex gap-2 p-2 border-t border-slate-100 bg-slate-50">
+                              <input
+                                value={newComment}
+                                onChange={(e) => setNewComment(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitComment(); } }}
+                                placeholder="Add a note…"
+                                maxLength={500}
+                                className="flex-1 text-xs rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-indigo-300"
+                              />
+                              <button
+                                onClick={submitComment}
+                                disabled={!newComment.trim() || submittingComment}
+                                className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40 transition"
+                              >
+                                {submittingComment ? "…" : "Post"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -15,10 +15,18 @@ import { Select } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Plus, Play, Users, Settings, Clock, UserPlus, Mail, Shield, Crown, Eye,
-  Trash2, ArrowLeft, Copy, ChevronRight
+  Trash2, ArrowLeft, Copy, ChevronRight, Layers
 } from "lucide-react";
 import { generateSessionCode } from "@/lib/utils";
 import type { Team, TeamMember, OrgMember, Session } from "@/types/database";
+
+interface SessionTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  card_deck: string;
+  stories: { title: string; description?: string }[];
+}
 
 export default function TeamDetailPage() {
   const params = useParams();
@@ -35,6 +43,8 @@ export default function TeamDetailPage() {
   const [inviteRole, setInviteRole] = useState("member");
   const [sessionName, setSessionName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [templates, setTemplates] = useState<SessionTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const supabase = createClient();
   const role = membership?.role ?? "member";
 
@@ -42,7 +52,18 @@ export default function TeamDetailPage() {
     loadTeam();
     loadMembers();
     loadSessions();
+    loadTemplates();
   }, [teamId]);
+
+  const loadTemplates = async () => {
+    if (!currentOrg) return;
+    const { data } = await supabase
+      .from("session_templates")
+      .select("id, name, description, card_deck, stories")
+      .eq("org_id", currentOrg.id)
+      .order("name", { ascending: true });
+    if (data) setTemplates(data as SessionTemplate[]);
+  };
 
   const loadTeam = async () => {
     const { data } = await supabase.from("teams").select("*").eq("id", teamId).single();
@@ -71,6 +92,10 @@ export default function TeamDetailPage() {
   const handleStartSession = async () => {
     if (!sessionName) return;
     setLoading(true);
+
+    const template = templates.find((t) => t.id === selectedTemplateId);
+    const deck = template?.card_deck ?? team?.card_deck ?? "fibonacci";
+
     const code = generateSessionCode();
     const { data } = await supabase
       .from("sessions")
@@ -79,12 +104,40 @@ export default function TeamDetailPage() {
         name: sessionName,
         join_code: code,
         status: "active",
-        card_deck: team?.card_deck ?? "fibonacci",
+        card_deck: deck,
         created_by: membership?.id,
       })
       .select()
       .single();
-    if (data) router.push(`/session/${data.id}`);
+
+    if (data) {
+      // Pre-create stories from template if one was selected
+      if (template && template.stories.length > 0) {
+        const storyRows = template.stories.map((s, i) => ({
+          session_id: data.id,
+          title: s.title,
+          description: s.description ?? null,
+          sequence: i + 1,
+          vote_status: "voting" as const,
+        }));
+        await supabase.from("stories").insert(storyRows);
+      }
+
+      // Fire-and-forget webhook notification
+      fetch("/api/webhook/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: data.id,
+          org_id: currentOrg?.id,
+          session_name: data.name,
+          team_name: team?.name,
+          started_by: membership?.display_name || membership?.email,
+        }),
+      }).catch(() => {});
+
+      router.push(`/session/${data.id}`);
+    }
     setLoading(false);
   };
 
@@ -334,19 +387,55 @@ export default function TeamDetailPage() {
       </Dialog>
 
       {/* New Session Dialog */}
-      <Dialog open={showNewSession} onOpenChange={setShowNewSession}>
+      <Dialog open={showNewSession} onOpenChange={(open) => { setShowNewSession(open); if (!open) { setSelectedTemplateId(""); setSessionName(""); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Start Session</DialogTitle>
             <DialogDescription>Create a new planning poker session for {team.name}.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
+            {/* Template selector */}
+            {templates.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <Layers className="inline h-3.5 w-3.5 mr-1 text-violet-500" />
+                  Load from Template (optional)
+                </label>
+                <Select
+                  value={selectedTemplateId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setSelectedTemplateId(id);
+                    if (id) {
+                      const t = templates.find((t) => t.id === id);
+                      if (t && !sessionName) setSessionName(t.name);
+                    }
+                  }}
+                  options={[
+                    { value: "", label: "— No template —" },
+                    ...templates.map((t) => ({
+                      value: t.id,
+                      label: `${t.name}${t.stories.length > 0 ? ` (${t.stories.length} stories)` : ""}`,
+                    })),
+                  ]}
+                />
+                {selectedTemplateId && (() => {
+                  const t = templates.find((t) => t.id === selectedTemplateId);
+                  return t ? (
+                    <p className="text-xs text-violet-600 mt-1">
+                      ✓ {t.stories.length} stories will be pre-loaded · deck: <span className="capitalize">{t.card_deck}</span>
+                    </p>
+                  ) : null;
+                })()}
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Session Name</label>
               <Input placeholder="Sprint 24 Planning" value={sessionName} onChange={(e) => setSessionName(e.target.value)} />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setShowNewSession(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => { setShowNewSession(false); setSelectedTemplateId(""); setSessionName(""); }}>Cancel</Button>
               <Button onClick={handleStartSession} disabled={loading || !sessionName}>
                 {loading ? "Starting..." : "Start Session"}
               </Button>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, ExternalLink, Check, X, Loader2, Pencil } from "lucide-react";
+import { ArrowRight, ExternalLink, Check, X, Loader2, Pencil, Bell, Trash2, Plus } from "lucide-react";
 
 interface JiraConfig {
   jiraUrl: string;
@@ -26,6 +26,17 @@ interface JiraFieldOption {
 export function IntegrationsContent() {
   const { currentOrg, membership, user } = useAuthStore();
   const actorName = membership?.display_name || user?.email || "Unknown";
+  const isAdmin = membership?.role === "admin";
+
+  // Webhooks state
+  const [webhooks, setWebhooks] = useState<any[]>([]);
+  const [webhooksLoading, setWebhooksLoading] = useState(true);
+  const [newWebhookName, setNewWebhookName] = useState("Slack");
+  const [newWebhookUrl, setNewWebhookUrl] = useState("");
+  const [addingWebhook, setAddingWebhook] = useState(false);
+  const [savingWebhook, setSavingWebhook] = useState(false);
+  const [webhookError, setWebhookError] = useState<string | null>(null);
+  const [testingWebhook, setTestingWebhook] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,7 +67,44 @@ export function IntegrationsContent() {
 
   useEffect(() => {
     loadJiraConfig();
+    loadWebhooks();
   }, [currentOrg]);
+
+  const loadWebhooks = async () => {
+    if (!currentOrg) return;
+    setWebhooksLoading(true);
+    const { data } = await supabase.from("org_webhooks").select("*").eq("org_id", currentOrg.id).order("created_at");
+    setWebhooks(data || []);
+    setWebhooksLoading(false);
+  };
+
+  const saveWebhook = async () => {
+    if (!newWebhookUrl.trim() || !currentOrg) return;
+    setSavingWebhook(true);
+    setWebhookError(null);
+    const { error } = await supabase.from("org_webhooks").insert({
+      org_id: currentOrg.id,
+      name: newWebhookName.trim() || "Webhook",
+      url: newWebhookUrl.trim(),
+      created_by: user?.id,
+    });
+    if (error) { setWebhookError(error.message); }
+    else { setNewWebhookUrl(""); setNewWebhookName("Slack"); setAddingWebhook(false); await loadWebhooks(); }
+    setSavingWebhook(false);
+  };
+
+  const deleteWebhook = async (id: string) => {
+    await supabase.from("org_webhooks").delete().eq("id", id);
+    setWebhooks((prev) => prev.filter((w) => w.id !== id));
+  };
+
+  const testWebhook = async (url: string, id: string) => {
+    setTestingWebhook(id);
+    try {
+      await fetch("/api/webhook/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
+    } catch {}
+    setTestingWebhook(null);
+  };
 
   const loadJiraConfig = async () => {
     if (!currentOrg) return;
@@ -516,6 +564,101 @@ export function IntegrationsContent() {
           )}
         </div>
       )}
+
+      {/* ── Slack / Teams Webhooks ── */}
+      <Card className="mt-8">
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <CardTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-600 flex items-center justify-center text-white">
+                <Bell className="h-5 w-5" />
+              </div>
+              <div>
+                Slack &amp; Teams Notifications
+                <p className="text-sm text-slate-500 font-normal mt-0.5">Post to a channel when a session goes live</p>
+              </div>
+            </CardTitle>
+            {isAdmin && !addingWebhook && (
+              <button onClick={() => setAddingWebhook(true)} className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+                <Plus className="h-4 w-4" /> Add webhook
+              </button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {webhooksLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-indigo-600" /></div>
+          ) : (
+            <>
+              {webhooks.length === 0 && !addingWebhook && (
+                <p className="text-sm text-slate-400 text-center py-4">No webhooks configured yet.</p>
+              )}
+              {webhooks.map((wh) => (
+                <div key={wh.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-slate-800">{wh.name}</span>
+                      {wh.is_active && <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full">Active</span>}
+                    </div>
+                    <p className="text-xs text-slate-400 font-mono truncate mt-0.5">{wh.url}</p>
+                  </div>
+                  {isAdmin && (
+                    <div className="flex gap-1 shrink-0">
+                      <button
+                        onClick={() => testWebhook(wh.url, wh.id)}
+                        disabled={testingWebhook === wh.id}
+                        className="text-xs px-2 py-1 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 transition"
+                      >
+                        {testingWebhook === wh.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Test"}
+                      </button>
+                      <button onClick={() => deleteWebhook(wh.id)} className="p-1.5 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 transition">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {addingWebhook && (
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 space-y-3">
+                  <p className="text-sm font-medium text-indigo-800">New webhook</p>
+                  <div className="flex gap-2">
+                    <select
+                      value={newWebhookName}
+                      onChange={(e) => setNewWebhookName(e.target.value)}
+                      className="text-sm rounded-lg border border-slate-200 bg-white px-3 py-2 w-32 outline-none focus:ring-2 focus:ring-indigo-300"
+                    >
+                      <option>Slack</option>
+                      <option>Teams</option>
+                      <option>Discord</option>
+                      <option>Custom</option>
+                    </select>
+                    <Input
+                      placeholder="https://hooks.slack.com/services/…"
+                      value={newWebhookUrl}
+                      onChange={(e) => setNewWebhookUrl(e.target.value)}
+                      className="flex-1 text-sm bg-white"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    In Slack: Apps → Incoming Webhooks → Add to channel → copy URL.{" "}
+                    <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">Guide →</a>
+                  </p>
+                  {webhookError && <p className="text-xs text-red-600">{webhookError}</p>}
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={saveWebhook} disabled={savingWebhook || !newWebhookUrl.trim()}>
+                      {savingWebhook ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Saving…</> : "Save"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setAddingWebhook(false); setWebhookError(null); setNewWebhookUrl(""); }}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

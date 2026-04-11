@@ -310,6 +310,16 @@ export default function VotingRoomPage() {
     if (voteData) setVotes(story.id, voteData);
     setShowResults(true);
 
+    // Auto-set final estimate when there is consensus on a numeric value
+    if (voteData && Array.isArray(voteData)) {
+      const numericVals = (voteData as any[]).map((v) => v.value).filter((v: string) => !isNaN(Number(v)));
+      if (numericVals.length > 0 && new Set(numericVals).size === 1) {
+        const consensusVal = numericVals[0];
+        await supabase.rpc("set_story_estimate", { p_story_id: story.id, p_estimate: consensusVal });
+        setStories(stories.map((s) => s.id === story.id ? { ...s, vote_status: "revealed" as const, final_estimate: consensusVal } : s));
+      }
+    }
+
     // Also load guest votes for this story
     if (hasGuestJoin) {
       const { data: gv } = await supabase.rpc("get_guest_votes", { p_story_id: story.id });
@@ -1053,50 +1063,35 @@ export default function VotingRoomPage() {
 
                     {/* Final Estimate + Jira Sync */}
                     {isSM && (
-                      <div className="space-y-3">
-                        <div className="inline-flex items-center gap-2 bg-white rounded-xl border border-slate-200 p-3">
-                          <span className="text-sm text-slate-600 font-medium">Final Estimate:</span>
-                          <div className="flex gap-1 flex-wrap">
-                            {cardDeck.filter((c) => c !== "?" && c !== "☕").map((c) => (
-                              <button
-                                key={c}
-                                onClick={() => handleSetEstimate(c)}
-                                className={`w-10 h-10 rounded-lg text-sm font-semibold transition ${
-                                  story.final_estimate === c
-                                    ? "bg-indigo-600 text-white"
-                                    : "bg-slate-100 text-slate-700 hover:bg-indigo-100"
-                                }`}
-                              >
-                                {c}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                      <div className="space-y-4 w-full max-w-sm mx-auto">
 
-                        {/* Jira sync section */}
+                        {/* ── Primary Jira sync CTA (shown first when Jira-linked) ── */}
                         {story.jira_key && jiraConnected && (
                           <div className="flex flex-col items-center gap-2">
-
-                            {/* ── Estimate sync row ── */}
                             {writingBack === story.jira_key ? (
-                              <span className="text-slate-400 text-sm flex items-center gap-1.5">
+                              <div className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-100 text-slate-500 text-sm font-medium">
                                 <Loader2 className="h-4 w-4 animate-spin" /> Syncing to Jira…
-                              </span>
+                              </div>
                             ) : syncedStories.has(story.jira_key) ? (
-                              <span className="text-emerald-600 text-sm flex items-center gap-1.5">
+                              <div className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-semibold">
                                 <Check className="h-4 w-4" /> Synced {story.final_estimate} SP → {story.jira_key}
-                              </span>
+                              </div>
                             ) : (
-                              <div className="flex flex-col items-center gap-1">
-                                <Button
-                                  size="sm"
+                              <div className="w-full flex flex-col items-center gap-2">
+                                <button
                                   disabled={!story.final_estimate}
-                                  className={`gap-1.5 ${story.final_estimate ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "opacity-40 cursor-not-allowed bg-slate-200 text-slate-500"}`}
                                   onClick={() => story.final_estimate && writeEstimateToJira(story.jira_key!, story.final_estimate)}
+                                  className={`w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all ${
+                                    story.final_estimate
+                                      ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md"
+                                      : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                  }`}
                                 >
-                                  <ExternalLink className="h-3.5 w-3.5" />
-                                  {story.final_estimate ? `Sync ${story.final_estimate} SP → ${story.jira_key}` : `Pick estimate to sync → ${story.jira_key}`}
-                                </Button>
+                                  <ExternalLink className="h-4 w-4" />
+                                  {story.final_estimate
+                                    ? `Push ${story.final_estimate} SP to Jira → ${story.jira_key}`
+                                    : `Select estimate below, then push to ${story.jira_key}`}
+                                </button>
                                 {syncError && <span className="text-red-500 text-xs flex items-center gap-1"><X className="h-3 w-3" /> {syncError}</span>}
                               </div>
                             )}
@@ -1161,6 +1156,28 @@ export default function VotingRoomPage() {
                                 <Check className="h-3.5 w-3.5 text-emerald-500" /> Comment posted to {story.jira_key}
                               </span>
                             )}
+                          </div>
+                        )}
+
+                        {/* ── Estimate picker (secondary — adjust the agreed value) ── */}
+                        {!syncedStories.has(story.jira_key ?? "") && !statusCommented.has(story.jira_key ?? "") && (
+                          <div className="flex flex-wrap items-center justify-center gap-1 bg-white rounded-xl border border-slate-100 p-2">
+                            <span className="text-xs text-slate-400 mr-1 font-medium">
+                              {story.final_estimate ? "Adjust:" : "Set estimate:"}
+                            </span>
+                            {cardDeck.filter((c) => c !== "?" && c !== "☕").map((c) => (
+                              <button
+                                key={c}
+                                onClick={() => handleSetEstimate(c)}
+                                className={`w-9 h-9 rounded-lg text-sm font-semibold transition ${
+                                  story.final_estimate === c
+                                    ? "bg-indigo-600 text-white ring-2 ring-indigo-300"
+                                    : "bg-slate-100 text-slate-700 hover:bg-indigo-100"
+                                }`}
+                              >
+                                {c}
+                              </button>
+                            ))}
                           </div>
                         )}
 

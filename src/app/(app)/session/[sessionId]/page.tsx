@@ -76,8 +76,10 @@ export default function VotingRoomPage() {
   const [timerActive, setTimerActive] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [showTimerPicker, setShowTimerPicker] = useState(false);
+  const [defaultTimerSeconds, setDefaultTimerSeconds] = useState(120); // 2 min auto-start default
   const timerEndsAtRef = useRef<string | null>(null);
   const timerChannelRef = useRef<any>(null);
+  const timerAutoStartedRef = useRef<Set<number>>(new Set()); // track which story indices got auto-started
 
   const supabase = createClient();
   const role = membership?.role ?? "member";
@@ -161,6 +163,20 @@ export default function VotingRoomPage() {
     return () => { supabase.removeChannel(ch); };
   }, [sessionId]);
 
+  // ── Auto-start timer on first story once session + channel are ready ──
+  useEffect(() => {
+    if (!session || !isSM || loading) return;
+    if (story?.vote_status === "revealed") return;
+    if (timerAutoStartedRef.current.has(currentStoryIndex)) return;
+    // Small delay to ensure timer channel is subscribed
+    const t = setTimeout(() => {
+      timerAutoStartedRef.current.add(currentStoryIndex);
+      startTimer(defaultTimerSeconds, false);
+    }, 600);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id, loading]);
+
   // ── Timer countdown tick ──────────────────────────────────────
   useEffect(() => {
     if (!timerActive || !timerEndsAtRef.current) return;
@@ -175,12 +191,13 @@ export default function VotingRoomPage() {
     return () => clearInterval(interval);
   }, [timerActive]);
 
-  const startTimer = (seconds: number) => {
+  const startTimer = (seconds: number, saveAsDefault = true) => {
     const endsAt = new Date(Date.now() + seconds * 1000).toISOString();
     timerEndsAtRef.current = endsAt;
     setTimerSeconds(seconds);
     setTimerActive(true);
     setShowTimerPicker(false);
+    if (saveAsDefault) setDefaultTimerSeconds(seconds);
     timerChannelRef.current?.send({ type: "broadcast", event: "timer", payload: { action: "start", endsAt } });
   };
 
@@ -207,7 +224,7 @@ export default function VotingRoomPage() {
       session_id: sessionId,
       story_id: story.id,
       user_id: user.id,
-      author_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Unknown",
+      author_name: user.name || user.email?.split("@")[0] || "Unknown",
       content: newComment.trim(),
     });
     if (!error) setNewComment("");
@@ -313,6 +330,11 @@ export default function VotingRoomPage() {
       if (isSM && session && stories[nextIndex]) {
         supabase.rpc("set_current_story", { p_session_id: session.id, p_story_id: stories[nextIndex].id }).then(() => {});
       }
+      // Auto-start timer for new story (SM only, if not already started for this index)
+      if (isSM && !timerAutoStartedRef.current.has(nextIndex)) {
+        timerAutoStartedRef.current.add(nextIndex);
+        setTimeout(() => startTimer(defaultTimerSeconds, false), 300);
+      }
     }
   };
 
@@ -346,6 +368,8 @@ export default function VotingRoomPage() {
     setVotes(story.id, []);
     setSelectedCard(null);
     setShowResults(false);
+    // Auto-restart timer for the re-vote
+    if (isSM) setTimeout(() => startTimer(defaultTimerSeconds, false), 300);
   };
 
   const handleSetEstimate = async (value: string) => {
@@ -853,12 +877,14 @@ export default function VotingRoomPage() {
                                   <button
                                     onClick={() => setShowTimerPicker(!showTimerPicker)}
                                     className="h-8 px-2.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 flex items-center gap-1.5 text-xs transition"
+                                    title={`Auto-starts at ${defaultTimerSeconds >= 60 ? `${defaultTimerSeconds / 60}m` : `${defaultTimerSeconds}s`} — click to change`}
                                   >
                                     <Timer className="h-3.5 w-3.5" />
-                                    Timer
+                                    {defaultTimerSeconds >= 60 ? `${defaultTimerSeconds / 60}m` : `${defaultTimerSeconds}s`}
                                   </button>
                                   {showTimerPicker && (
-                                    <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-30 p-2 flex flex-col gap-0.5 min-w-[110px]">
+                                    <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-30 p-2 flex flex-col gap-0.5 min-w-[130px]">
+                                      <p className="text-[10px] text-slate-400 px-3 pb-1 font-medium uppercase tracking-wide">Auto-start default</p>
                                       {[
                                         { label: "30 sec", s: 30 },
                                         { label: "1 min",  s: 60 },
@@ -866,8 +892,13 @@ export default function VotingRoomPage() {
                                         { label: "5 min",  s: 300 },
                                       ].map(({ label, s }) => (
                                         <button key={s} onClick={() => startTimer(s)}
-                                          className="text-sm px-3 py-1.5 rounded-lg hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-left transition">
+                                          className={`text-sm px-3 py-1.5 rounded-lg text-left transition flex items-center justify-between ${
+                                            defaultTimerSeconds === s
+                                              ? "bg-indigo-50 text-indigo-700 font-semibold"
+                                              : "hover:bg-indigo-50 text-slate-700 hover:text-indigo-700"
+                                          }`}>
                                           {label}
+                                          {defaultTimerSeconds === s && <Check className="h-3 w-3" />}
                                         </button>
                                       ))}
                                     </div>
@@ -1132,6 +1163,38 @@ export default function VotingRoomPage() {
                             )}
                           </div>
                         )}
+
+                        {/* ── Decision confirmed + Next Story CTA ── */}
+                        {story.final_estimate && (() => {
+                          // Show when: no Jira key, OR Jira synced, OR Jira commented (no consensus / no time)
+                          const jiraResolved = !story.jira_key || !jiraConnected
+                            || syncedStories.has(story.jira_key ?? "")
+                            || statusCommented.has(story.jira_key ?? "");
+                          if (!jiraResolved) return null;
+                          return (
+                            <div className="mt-4 flex flex-col items-center gap-3 animate-fade-in-up">
+                              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold text-sm">
+                                <Check className="h-4 w-4 shrink-0" />
+                                Decision: <span className="font-black">{story.final_estimate} SP</span> agreed
+                              </div>
+                              {currentStoryIndex < stories.length - 1 ? (
+                                <Button
+                                  onClick={handleNextStory}
+                                  className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
+                                >
+                                  Next Story <SkipForward className="h-4 w-4" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  onClick={handleEndSession}
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                                >
+                                  All done — End Session
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>

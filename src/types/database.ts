@@ -69,6 +69,8 @@ export interface Story {
   sequence: number;
   final_estimate: string | null;
   vote_status: VoteStatus;
+  sent_back_to_bsa: boolean;
+  bsa_note: string | null;
   created_at: string;
 }
 

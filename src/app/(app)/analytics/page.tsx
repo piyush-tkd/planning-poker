@@ -11,7 +11,7 @@ import { Select } from "@/components/ui/select";
 import {
   BarChart3, TrendingUp, Target, Users, Clock, Download, Lock,
   ArrowUp, ArrowDown, Minus, Loader2, CheckCircle2, AlertCircle,
-  FileText, Calendar
+  FileText, Calendar, RotateCcw
 } from "lucide-react";
 import { PLAN_LIMITS } from "@/lib/utils";
 
@@ -33,6 +33,8 @@ interface StoryRow {
   jira_key: string | null;
   final_estimate: string | null;
   vote_status: string;
+  sent_back_to_bsa: boolean;
+  bsa_note: string | null;
 }
 
 interface VoteRow {
@@ -47,6 +49,7 @@ interface TeamStat {
   stories: number;
   estimated: number;
   consensus: number;
+  sentBackToBsa: number;
 }
 
 interface ChartBar { label: string; count: number; }
@@ -96,10 +99,10 @@ function consensusRate(storyIds: string[], votes: VoteRow[]): number {
 
 function exportSessionCSV(session: SessionRow, stories: StoryRow[]) {
   const rows = [
-    ["Story", "Jira Key", "Final Estimate", "Status"],
+    ["Story", "Jira Key", "Final Estimate", "Status", "Sent Back to BSA", "BSA Note"],
     ...stories
       .filter((s) => s.session_id === session.id)
-      .map((s) => [s.title, s.jira_key ?? "", s.final_estimate ?? "", s.vote_status]),
+      .map((s) => [s.title, s.jira_key ?? "", s.final_estimate ?? "", s.vote_status, s.sent_back_to_bsa ? "Yes" : "No", s.bsa_note ?? ""]),
   ];
   const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
@@ -112,12 +115,12 @@ function exportSessionCSV(session: SessionRow, stories: StoryRow[]) {
 }
 
 function exportAllCSV(sessions: SessionRow[], stories: StoryRow[]) {
-  const rows = [["Session", "Team", "Date", "Story", "Jira Key", "Estimate"]];
+  const rows = [["Session", "Team", "Date", "Story", "Jira Key", "Estimate", "Sent Back to BSA", "BSA Note"]];
   for (const s of sessions) {
     const ss = stories.filter((st) => st.session_id === s.id);
-    if (ss.length === 0) rows.push([s.name, s.team_name, s.created_at.slice(0, 10), "", "", ""]);
+    if (ss.length === 0) rows.push([s.name, s.team_name, s.created_at.slice(0, 10), "", "", "", "", ""]);
     else for (const st of ss) {
-      rows.push([s.name, s.team_name, s.created_at.slice(0, 10), st.title, st.jira_key ?? "", st.final_estimate ?? ""]);
+      rows.push([s.name, s.team_name, s.created_at.slice(0, 10), st.title, st.jira_key ?? "", st.final_estimate ?? "", st.sent_back_to_bsa ? "Yes" : "No", st.bsa_note ?? ""]);
     }
   }
   const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -214,7 +217,7 @@ export default function AnalyticsPage() {
     if (sessionIds.length > 0) {
       const { data: storyData } = await supabase
         .from("stories")
-        .select("id, session_id, title, jira_key, final_estimate, vote_status")
+        .select("id, session_id, title, jira_key, final_estimate, vote_status, sent_back_to_bsa, bsa_note")
         .in("session_id", sessionIds);
       const storyRows: StoryRow[] = storyData ?? [];
       setStories(storyRows);
@@ -240,6 +243,7 @@ export default function AnalyticsPage() {
             stories: tStories.length,
             estimated: tStories.filter((s) => s.final_estimate).length,
             consensus: consensusRate(tStoryIds, voteData ?? []),
+            sentBackToBsa: tStories.filter((s) => s.sent_back_to_bsa).length,
           };
         }).filter((t) => t.sessions > 0);
         setTeamStats(stats);
@@ -258,6 +262,7 @@ export default function AnalyticsPage() {
 
   /* ── Computed metrics ── */
   const totalEstimated = stories.filter((s) => s.final_estimate).length;
+  const totalSentBackToBsa = stories.filter((s) => s.sent_back_to_bsa).length;
   const storyIds = stories.map((s) => s.id);
   const cRate = consensusRate(storyIds, votes);
   const jiraStories = stories.filter((s) => s.jira_key).length;
@@ -312,7 +317,7 @@ export default function AnalyticsPage() {
     { label: "Sessions", value: sessions.length, icon: BarChart3, color: "bg-indigo-100 text-indigo-600" },
     { label: "Stories Estimated", value: totalEstimated, icon: Target, color: "bg-violet-100 text-violet-600" },
     { label: "Consensus Rate", value: `${cRate}%`, icon: CheckCircle2, color: "bg-emerald-100 text-emerald-600" },
-    { label: "Jira-linked Stories", value: jiraStories, icon: FileText, color: "bg-amber-100 text-amber-600" },
+    { label: "Sent Back to BSA", value: totalSentBackToBsa, icon: RotateCcw, color: "bg-rose-100 text-rose-600" },
   ];
 
   return (
@@ -487,6 +492,12 @@ export default function AnalyticsPage() {
                             {storyIds.filter((sid) => votes.filter((v) => v.story_id === sid).length === 0).length} no votes
                           </span>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-rose-400" />
+                          <span className="text-sm text-slate-600">
+                            {totalSentBackToBsa} sent back to BSA
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -517,6 +528,10 @@ export default function AnalyticsPage() {
                         {
                           label: "Jira-linked stories",
                           value: stories.length > 0 ? `${Math.round((jiraStories / stories.length) * 100)}%` : "—",
+                        },
+                        {
+                          label: "Stories needing BSA clarification",
+                          value: stories.length > 0 ? `${Math.round((totalSentBackToBsa / stories.length) * 100)}%` : "—",
                         },
                       ].map((s) => (
                         <div key={s.label} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
@@ -558,14 +573,15 @@ export default function AnalyticsPage() {
                               <p className="text-xs text-slate-400">consensus</p>
                             </div>
                           </div>
-                          <div className="grid grid-cols-3 gap-3">
+                          <div className="grid grid-cols-4 gap-2">
                             {[
-                              { label: "Sessions", v: t.sessions },
-                              { label: "Stories", v: t.stories },
-                              { label: "Estimated", v: t.estimated },
+                              { label: "Sessions", v: t.sessions, color: "" },
+                              { label: "Stories", v: t.stories, color: "" },
+                              { label: "Estimated", v: t.estimated, color: "" },
+                              { label: "↩ BSA", v: t.sentBackToBsa, color: t.sentBackToBsa > 0 ? "text-rose-600" : "" },
                             ].map((s) => (
                               <div key={s.label} className="bg-white rounded-lg p-2.5 text-center border border-slate-100">
-                                <p className="text-lg font-bold text-slate-900">{s.v}</p>
+                                <p className={`text-lg font-bold ${s.color || "text-slate-900"}`}>{s.v}</p>
                                 <p className="text-xs text-slate-400">{s.label}</p>
                               </div>
                             ))}
@@ -605,6 +621,7 @@ export default function AnalyticsPage() {
                           <th className="pb-3 pr-4 font-medium text-slate-500 whitespace-nowrap text-center">Stories</th>
                           <th className="pb-3 pr-4 font-medium text-slate-500 whitespace-nowrap text-center">Estimated</th>
                           <th className="pb-3 pr-4 font-medium text-slate-500 whitespace-nowrap text-center">Consensus</th>
+                          <th className="pb-3 pr-4 font-medium text-slate-500 whitespace-nowrap text-center">↩ BSA</th>
                           <th className="pb-3 pr-4 font-medium text-slate-500 whitespace-nowrap">Date</th>
                           <th className="pb-3 font-medium text-slate-500 whitespace-nowrap">Status</th>
                           <th className="pb-3" />
@@ -616,6 +633,7 @@ export default function AnalyticsPage() {
                           const est = ss.filter((st) => st.final_estimate).length;
                           const sid = ss.map((st) => st.id);
                           const cr = consensusRate(sid, votes);
+                          const bsaCount = ss.filter((st) => st.sent_back_to_bsa).length;
                           return (
                             <tr key={s.id} className="hover:bg-slate-50 transition">
                               <td className="py-3 pr-4">
@@ -631,6 +649,13 @@ export default function AnalyticsPage() {
                                   <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
                                     cr >= 70 ? "bg-emerald-100 text-emerald-700" : cr >= 40 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
                                   }`}>{cr}%</span>
+                                ) : <span className="text-slate-300">—</span>}
+                              </td>
+                              <td className="py-3 pr-4 text-center">
+                                {bsaCount > 0 ? (
+                                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                                    {bsaCount}
+                                  </span>
                                 ) : <span className="text-slate-300">—</span>}
                               </td>
                               <td className="py-3 pr-4 text-slate-400 whitespace-nowrap text-xs">

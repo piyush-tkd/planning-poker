@@ -15,8 +15,52 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Play, Eye, EyeOff, SkipForward, Plus, Copy, Check, Users, Clock, X,
   ChevronLeft, ChevronRight, RefreshCw, BarChart3, ArrowLeft, Share2, Timer,
-  Search, Loader2, ExternalLink, Upload, Link2, Crown, Download
+  Search, Loader2, ExternalLink, Upload, Link2, Crown, Download, RotateCcw
 } from "lucide-react";
+
+/* ── BSA send-back note panel (reused in Jira + non-Jira flows) ── */
+function BsaNotePanel({
+  bsaNote, setBsaNote, bsaSending, bsaError, onConfirm, onCancel,
+}: {
+  bsaNote: string;
+  setBsaNote: (v: string) => void;
+  bsaSending: boolean;
+  bsaError: string | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="w-full max-w-sm space-y-2">
+      <p className="text-xs text-slate-500 text-center">
+        Mark this story as needing BSA clarification before it can be estimated.
+      </p>
+      <input
+        type="text"
+        placeholder="What needs clarification? (optional)"
+        value={bsaNote}
+        onChange={(e) => setBsaNote(e.target.value)}
+        className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-300"
+      />
+      <div className="flex gap-2 justify-center">
+        <button
+          onClick={onCancel}
+          className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
+        >
+          Cancel
+        </button>
+        <button
+          disabled={bsaSending}
+          onClick={onConfirm}
+          className="text-xs px-3 py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 flex items-center gap-1"
+        >
+          {bsaSending && <Loader2 className="h-3 w-3 animate-spin" />}
+          <RotateCcw className="h-3 w-3" /> Send to BSA
+        </button>
+      </div>
+      {bsaError && <p className="text-xs text-red-500 text-center">{bsaError}</p>}
+    </div>
+  );
+}
 import { FIBONACCI, T_SHIRT, PLAN_LIMITS, stripJiraMarkup } from "@/lib/utils";
 
 export default function VotingRoomPage() {
@@ -67,6 +111,11 @@ export default function VotingRoomPage() {
   const [statusCommentError, setStatusCommentError] = useState<string | null>(null);
   const [showSmNote, setShowSmNote] = useState<"no_consensus" | "no_time" | null>(null);
   const [smNote, setSmNote] = useState("");
+  // Send-back to BSA state
+  const [showBsaNote, setShowBsaNote] = useState(false);
+  const [bsaNote, setBsaNote] = useState("");
+  const [bsaSending, setBsaSending] = useState(false);
+  const [bsaError, setBsaError] = useState<string | null>(null);
   // Observer comments
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -659,6 +708,28 @@ export default function VotingRoomPage() {
     setWritingBack(null);
   };
 
+  // Mark story as sent back to BSA for clarification
+  const handleSendBackToBsa = async () => {
+    if (!story || !isSM) return;
+    setBsaSending(true);
+    setBsaError(null);
+    const { error } = await supabase
+      .from("stories")
+      .update({ sent_back_to_bsa: true, bsa_note: bsaNote.trim() || null })
+      .eq("id", story.id);
+    if (error) {
+      setBsaError(error.message);
+      setBsaSending(false);
+      return;
+    }
+    setStories(stories.map((s) =>
+      s.id === story.id ? { ...s, sent_back_to_bsa: true, bsa_note: bsaNote.trim() || null } : s
+    ));
+    setShowBsaNote(false);
+    setBsaNote("");
+    setBsaSending(false);
+  };
+
   const copyCode = () => {
     if (session?.join_code) {
       navigator.clipboard.writeText(session.join_code);
@@ -823,9 +894,11 @@ export default function VotingRoomPage() {
                         {s.title}
                       </span>
                     </div>
-                    {s.final_estimate && (
+                    {s.sent_back_to_bsa ? (
+                      <Badge variant="secondary" className="text-[10px] ml-2 flex-shrink-0 bg-violet-100 text-violet-700 border-violet-200">↩ BSA</Badge>
+                    ) : s.final_estimate ? (
                       <Badge variant="default" className="text-[10px] ml-2 flex-shrink-0">{s.final_estimate}</Badge>
-                    )}
+                    ) : null}
                   </div>
                 </button>
               ))
@@ -1096,9 +1169,9 @@ export default function VotingRoomPage() {
                               </div>
                             )}
 
-                            {/* ── No consensus / No time divider ── */}
-                            {!syncedStories.has(story.jira_key) && !statusCommented.has(story.jira_key) && (
-                              <div className="flex items-center gap-2 pt-1">
+                            {/* ── No consensus / No time / Send to BSA divider ── */}
+                            {!syncedStories.has(story.jira_key) && !statusCommented.has(story.jira_key) && !story.sent_back_to_bsa && (
+                              <div className="flex flex-wrap items-center gap-2 pt-1">
                                 <span className="text-xs text-slate-300">or</span>
                                 <button
                                   onClick={() => setShowSmNote(showSmNote === "no_consensus" ? null : "no_consensus")}
@@ -1111,6 +1184,12 @@ export default function VotingRoomPage() {
                                   className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100 transition"
                                 >
                                   ⏱ No Time
+                                </button>
+                                <button
+                                  onClick={() => { setShowBsaNote((v) => !v); setShowSmNote(null); }}
+                                  className="text-xs px-2.5 py-1 rounded-lg border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 transition"
+                                >
+                                  ↩ Send to BSA
                                 </button>
                               </div>
                             )}
@@ -1156,11 +1235,28 @@ export default function VotingRoomPage() {
                                 <Check className="h-3.5 w-3.5 text-emerald-500" /> Comment posted to {story.jira_key}
                               </span>
                             )}
+
+                            {/* ── BSA send-back note (Jira stories) ── */}
+                            {showBsaNote && !story.sent_back_to_bsa && (
+                              <BsaNotePanel
+                                bsaNote={bsaNote} setBsaNote={setBsaNote}
+                                bsaSending={bsaSending} bsaError={bsaError}
+                                onConfirm={handleSendBackToBsa}
+                                onCancel={() => { setShowBsaNote(false); setBsaNote(""); }}
+                              />
+                            )}
+
+                            {/* ── Already sent back ── */}
+                            {story.sent_back_to_bsa && (
+                              <span className="text-xs text-violet-600 flex items-center gap-1.5 font-medium">
+                                <Check className="h-3.5 w-3.5" /> Sent back to BSA{story.bsa_note ? ` — "${story.bsa_note}"` : ""}
+                              </span>
+                            )}
                           </div>
                         )}
 
                         {/* ── Estimate picker (secondary — adjust the agreed value) ── */}
-                        {!syncedStories.has(story.jira_key ?? "") && !statusCommented.has(story.jira_key ?? "") && (
+                        {!syncedStories.has(story.jira_key ?? "") && !statusCommented.has(story.jira_key ?? "") && !story.sent_back_to_bsa && (
                           <div className="flex flex-wrap items-center justify-center gap-1 bg-white rounded-xl border border-slate-100 p-2">
                             <span className="text-xs text-slate-400 mr-1 font-medium">
                               {story.final_estimate ? "Adjust:" : "Set estimate:"}
@@ -1178,6 +1274,35 @@ export default function VotingRoomPage() {
                                 {c}
                               </button>
                             ))}
+                          </div>
+                        )}
+
+                        {/* ── Send to BSA (non-Jira stories or without Jira connected) ── */}
+                        {(!story.jira_key || !jiraConnected) && !story.sent_back_to_bsa && (
+                          <div className="flex flex-col items-center gap-2">
+                            {!showBsaNote ? (
+                              <button
+                                onClick={() => setShowBsaNote(true)}
+                                className="text-xs px-3 py-1.5 rounded-lg border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 transition"
+                              >
+                                ↩ Send back to BSA
+                              </button>
+                            ) : (
+                              <BsaNotePanel
+                                bsaNote={bsaNote} setBsaNote={setBsaNote}
+                                bsaSending={bsaSending} bsaError={bsaError}
+                                onConfirm={handleSendBackToBsa}
+                                onCancel={() => { setShowBsaNote(false); setBsaNote(""); }}
+                              />
+                            )}
+                          </div>
+                        )}
+
+                        {/* ── Already sent back (non-Jira) ── */}
+                        {(!story.jira_key || !jiraConnected) && story.sent_back_to_bsa && (
+                          <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-violet-50 border border-violet-200 text-violet-700 text-sm font-medium">
+                            <Check className="h-4 w-4 shrink-0" />
+                            Sent back to BSA{story.bsa_note ? ` — "${story.bsa_note}"` : ""}
                           </div>
                         )}
 

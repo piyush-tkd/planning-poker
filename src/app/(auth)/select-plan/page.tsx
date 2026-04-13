@@ -78,7 +78,11 @@ export default function SelectPlanPage() {
       });
 
       if (orgError) {
-        setError(`Create org failed: ${orgError.message} (code: ${orgError.code})`);
+        if (orgError.code === "23505" || orgError.message?.includes("organizations_slug_key")) {
+          setError(`An organization named "${orgName}" already exists. Try a different name — e.g. add your team or department.`);
+        } else {
+          setError(`Could not create organization: ${orgError.message}`);
+        }
         setLoading(false);
         return;
       }

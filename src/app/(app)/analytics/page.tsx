@@ -573,7 +573,7 @@ export default function AnalyticsPage() {
                               <p className="text-xs text-slate-400">consensus</p>
                             </div>
                           </div>
-                          <div className="grid grid-cols-4 gap-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {[
                               { label: "Sessions", v: t.sessions, color: "" },
                               { label: "Stories", v: t.stories, color: "" },
